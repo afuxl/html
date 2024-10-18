@@ -1,0 +1,3 @@
+ini hanya permulaan
+
+data ais kapal ini diambil dari i-.....
