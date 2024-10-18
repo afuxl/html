@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Peta dengan Tooltip dan Popup</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+
+        /* Pastikan ikon memiliki transparansi */
+        .rotating-icon img {
+            background-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <script>
+        // Inisialisasi peta
+        var map = L.map('map').setView([-4.100000, 122.716666], 11); // Kendari dan sekitarnya
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Inisialisasi marker cluster
+        var markers = L.markerClusterGroup();
+
+        // Fungsi untuk membuat ikon kapal yang berputar
+        function createRotatingIcon(course) {
+            return L.divIcon({
+                html: `<img src="https://www.svgrepo.com/show/350375/location-arrow-up.svg" style="transform: rotate(${course}deg); width: 30px; height: 30px;" />`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15],
+                popupAnchor: [0, -15],
+                className: 'rotating-icon'
+            });
+        }
+
+
+        function timeAgo(timestamp) {
+            const now = new Date();
+            const timeDifference = now - new Date(timestamp * 1000); // Selisih dalam milidetik
+
+            const seconds = Math.floor(timeDifference / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (days > 0) {
+                return days + " hari lalu";
+            } else if (hours > 0) {
+                return hours + " jam lalu";
+            } else if (minutes > 0) {
+                return minutes + " menit lalu";
+            } else {
+                return seconds + " detik lalu";
+            }
+        }
+
+        function getFlagEmoji(countryCode) {
+            const codePoints = countryCode.toUpperCase().split('')
+                .map(c => 0x1F1E6 - 65 + c.charCodeAt()); // Mengubah kode negara menjadi emoji
+            return String.fromCodePoint(...codePoints);
+        }
+
+        // Fetch data dari API
+          fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
+          //fetch('file:///D:/Documents/localcurrentmap.json') 
+            .then(response => response.json())
+            .then(data => {
+                var currentMap = data.currentMap; // Data JSON
+
+                // Looping melalui data dan tambahkan marker
+                for (var key in currentMap) {
+                    if (currentMap.hasOwnProperty(key)) {
+                        var ship = currentMap[key];
+                        var mmsi = ship[0];       // MMSI (kolom ke-0)
+                        var shipType = ship[1];   // Ship Type (kolom ke-1)
+                        var latitude = ship[4];   // Latitude (kolom ke-4)
+                        var longitude = ship[3];  // Longitude (kolom ke-3)
+                        var timestamp = ship[5];  // Timestamp (kolom ke-5)
+                        var name = ship[8] || mmsi; // Nama Kapal (kolom ke-8) atau MMSI jika tidak ada nama kapal
+                        var callSign = ship[9];   // Call Sign (kolom ke-9)
+                        var imo = ship[11];       // IMO (kolom ke-11)
+                        var flag = ship[14];      // Flag (kolom ke-14)
+                        var speed = ship[7];      // Speed (kolom ke-7)
+                        var navStatus = ship[15]; // Navigational Status (kolom ke-15)
+                        var destination = ship[18];// Destination (kolom ke-18)
+                        var gt = ship[13];        // Gross Tonnage (kolom ke-13)
+                        var course = ship[17];    // Course (kolom ke-17)
+                        var source= ship[6];    // Course (kolom ke-17)
+                        var eta= ship[16];    // Course (kolom ke-17)
+
+                        var flagEmoji = flag ? getFlagEmoji(flag) : "N/A";
+
+                        if (latitude && longitude) {
+                            // Buat marker dengan ikon yang berputar
+                            var marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course || 0) });
+
+                            // Menambahkan tooltip dengan nama kapal atau MMSI
+                            marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
+
+                            // Bind popup dengan informasi lengkap ketika diklik
+                            marker.bindPopup(
+                                `<b>${name}</b><br>` +
+                                `MMSI: ${mmsi}<br>` +  // Menambahkan MMSI
+                                `Tipe Kapal: ${shipType}<br>` +
+                                `IMO: ${imo || 'N/A'}<br>` +
+                                `Flag: ${flagEmoji}<br>` +  // Menampilkan emoji bendera
+                                `Call Sign: ${callSign || 'N/A'}<br>` +
+                                `Kecepatan: ${speed || 'N/A'} knots<br>` +
+                                `Status: ${navStatus || 'N/A'}<br>` +
+                                `Tujuan: ${destination || 'N/A'}, Eta: ${eta || 'N/A'}<br>` +
+                                `GT: ${gt || 'N/A'}<br>` +
+                                `Data Terakhir: ${timeAgo(timestamp)}<br>` + // Tampilkan waktu relatif
+                                `Timestamp: ${new Date(timestamp * 1000).toLocaleString()} <br>` +
+                                `Sumber: ${source || 'N/A'}<br>` 
+                            );
+
+                            // Tambahkan marker ke cluster
+                            markers.addLayer(marker);
+                        }
+                    }
+                }
+
+                // Tambahkan cluster ke peta
+                map.addLayer(markers);
+            })
+            .catch(error => console.error('Error fetching data:', error));
+    </script>
+</body>
+</html>
