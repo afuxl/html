@@ -61,12 +61,12 @@
         /* Opsi Auto Update */
         #auto-update {
             position: absolute;
-            bottom: 30px;
+            bottom: 10px;
             left: 10px;
             background-color: rgba(255, 255, 255, 0.8);
-            padding: 5px 10px;
+            padding: 5px;
             border-radius: 5px;
-            z-index: 1000;
+            z-index: 2000; /* Menambah z-index untuk memastikan berada di atas elemen lain */
             font-size: 14px;
         }
 
@@ -76,7 +76,7 @@
     </style>
 </head>
 <body>
-    <div id="map">
+    <div id="map"></div>
     <div id="last-update" onclick="fetchDataAndUpdateMap()">Last update: N/A</div>
     <div id="ship-count">Total ships: 0</div> <!-- Tambahkan elemen ini -->
     <div id="auto-update">
@@ -88,7 +88,6 @@
             <option value="120000">2 menit</option>
             <option value="300000">5 menit</option>
         </select>
-    </div>
     </div>
     <script src="/js/map.js"></script>
 </body>
