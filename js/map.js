@@ -1,9 +1,34 @@
 // Inisialisasi peta
-var map = L.map('map').setView([-4.100000, 122.716666], 11); // Kendari dan sekitarnya
+        var map = L.map('map').setView([-2.548926, 118.0148634], 5); // Indonesia center
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-}).addTo(map);
+        // Basemap OpenStreetMap
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        }).addTo(map); // Default basemap
+
+        // Basemap Satelite
+        var satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: '© Google Satellite'
+        });
+
+        // Basemap Terrain
+        var terrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains:['mt0','mt1','mt2','mt3'],
+            attribution: '© Google Terrain'
+        });
+
+        // Menambahkan Layer Control
+        var baseMaps = {
+            "OpenStreetMap": osm,
+            "Satellite": satellite,
+            "Terrain": terrain
+        };
+
+        L.control.layers(baseMaps).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
