@@ -19,10 +19,22 @@
         .rotating-icon img {
             background-color: transparent;
         }
+
+        #last-update {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
+    <div id="last-update">Last update: N/A</div>
     <script>
         // Inisialisasi peta
         var map = L.map('map').setView([-4.100000, 122.716666], 11); // Kendari dan sekitarnya
@@ -72,70 +84,91 @@
             return String.fromCodePoint(...codePoints);
         }
 
-        // Fetch data dari API
-          fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
-          //fetch('file:///D:/Documents/localcurrentmap.json') 
-            .then(response => response.json())
-            .then(data => {
-                var currentMap = data.currentMap; // Data JSON
+        function updateLastUpdateTimestamp(apiTimestamp) {
+            const timestamp = new Date(apiTimestamp * 1000).toLocaleString(); // Ubah timestamp jadi locale string
+            document.getElementById('last-update').innerText = `Last update: ${timestamp}`;
+        }
+        // Fungsi untuk mengambil data API dan memperbarui peta
+        function fetchDataAndUpdateMap() {
 
-                // Looping melalui data dan tambahkan marker
-                for (var key in currentMap) {
-                    if (currentMap.hasOwnProperty(key)) {
-                        var ship = currentMap[key];
-                        var mmsi = ship[0];       // MMSI (kolom ke-0)
-                        var shipType = ship[1];   // Ship Type (kolom ke-1)
-                        var latitude = ship[4];   // Latitude (kolom ke-4)
-                        var longitude = ship[3];  // Longitude (kolom ke-3)
-                        var timestamp = ship[5];  // Timestamp (kolom ke-5)
-                        var name = ship[8] || mmsi; // Nama Kapal (kolom ke-8) atau MMSI jika tidak ada nama kapal
-                        var callSign = ship[9];   // Call Sign (kolom ke-9)
-                        var imo = ship[11];       // IMO (kolom ke-11)
-                        var flag = ship[14];      // Flag (kolom ke-14)
-                        var speed = ship[7];      // Speed (kolom ke-7)
-                        var navStatus = ship[15]; // Navigational Status (kolom ke-15)
-                        var destination = ship[18];// Destination (kolom ke-18)
-                        var gt = ship[13];        // Gross Tonnage (kolom ke-13)
-                        var course = ship[17];    // Course (kolom ke-17)
-                        var source= ship[6];    // Course (kolom ke-17)
-                        var eta= ship[16];    // Course (kolom ke-17)
 
-                        var flagEmoji = flag ? getFlagEmoji(flag) : "N/A";
+            // Fetch data dari API
+            fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
+                .then(response => response.json())
+                .then(data => {
+                    var currentMap = data.currentMap;
+                    var apiTimestamp = data.timestamp;
 
-                        if (latitude && longitude) {
-                            // Buat marker dengan ikon yang berputar
-                            var marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course || 0) });
+                    // Perbarui informasi "Last update" di UI
+                    updateLastUpdateTimestamp(apiTimestamp);
+                // Kosongkan semua marker dari cluster sebelum menambahkan yang baru
+                 markers.clearLayers();
 
-                            // Menambahkan tooltip dengan nama kapal atau MMSI
-                            marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
+                    for (var key in currentMap) {
+                        if (currentMap.hasOwnProperty(key)) {
+                            var ship = currentMap[key];
+                            var mmsi = ship[0];
+                            var shipType = ship[1];
+                            var latitude = ship[4];
+                            var longitude = ship[3];
+                            var timestamp = ship[5];
+                            var name = ship[8] || mmsi;
+                            var callSign = ship[9];
+                            var imo = ship[11];
+                            var flag = ship[14];
+                            var speed = ship[7];
+                            var navStatus = ship[15];
+                            var destination = ship[18];
+                            var gt = ship[13];
+                            var course = ship[17];
+                            var source = ship[6];
+                            var eta = ship[16];
 
-                            // Bind popup dengan informasi lengkap ketika diklik
-                            marker.bindPopup(
-                                `<b>${name}</b><br>` +
-                                `MMSI: ${mmsi}<br>` +  // Menambahkan MMSI
-                                `Tipe Kapal: ${shipType}<br>` +
-                                `IMO: ${imo || 'N/A'}<br>` +
-                                `Flag: ${flagEmoji}<br>` +  // Menampilkan emoji bendera
-                                `Call Sign: ${callSign || 'N/A'}<br>` +
-                                `Kecepatan: ${speed || 'N/A'} knots<br>` +
-                                `Status: ${navStatus || 'N/A'}<br>` +
-                                `Tujuan: ${destination || 'N/A'}, Eta: ${eta || 'N/A'}<br>` +
-                                `GT: ${gt || 'N/A'}<br>` +
-                                `Data Terakhir: ${timeAgo(timestamp)}<br>` + // Tampilkan waktu relatif
-                                `Timestamp: ${new Date(timestamp * 1000).toLocaleString()} <br>` +
-                                `Sumber: ${source || 'N/A'}<br>` 
-                            );
+                            var flagEmoji = flag ? getFlagEmoji(flag) : "N/A";
 
-                            // Tambahkan marker ke cluster
-                            markers.addLayer(marker);
+                            if (latitude && longitude) {
+                                var marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course || 0) });
+
+                                marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
+
+                                // Event untuk menutup tooltip ketika marker diklik
+                                marker.on('click', function() {
+                                    marker.closeTooltip();
+                                });
+
+                                marker.bindPopup(
+                                    `<b>${name}</b><br>` +
+                                    `MMSI: ${mmsi}<br>` +
+                                    `Tipe Kapal: ${shipType}<br>` +
+                                    `IMO: ${imo || 'N/A'}<br>` +
+                                    `Flag: ${flagEmoji}<br>` +
+                                    `Call Sign: ${callSign || 'N/A'}<br>` +
+                                    `Kecepatan: ${speed || 'N/A'} knots<br>` +
+                                    `Status: ${navStatus || 'N/A'}<br>` +
+                                    `Tujuan: ${destination || 'N/A'}, Eta: ${eta || 'N/A'}<br>` +
+                                    `GT: ${gt || 'N/A'}<br>` +
+                                    `Data Terakhir: ${timeAgo(timestamp)}<br>` +
+                                    `Timestamp: ${new Date(timestamp * 1000).toLocaleString()} <br>` +
+                                    `Sumber: ${source || 'N/A'}<br>`
+                                );
+
+                                markers.addLayer(marker);
+                            }
                         }
                     }
-                }
 
-                // Tambahkan cluster ke peta
-                map.addLayer(markers);
-            })
-            .catch(error => console.error('Error fetching data:', error));
+                    // Tambahkan cluster ke peta
+                    map.addLayer(markers);
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        // Panggil fungsi fetchDataAndUpdateMap untuk pertama kali
+        fetchDataAndUpdateMap();
+
+        // Panggil fungsi fetchDataAndUpdateMap setiap 30 detik
+        setInterval(fetchDataAndUpdateMap, 30000);
+
     </script>
 </body>
 </html>
