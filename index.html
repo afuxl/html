@@ -38,16 +38,26 @@
             z-index: 1000;
             cursor: pointer;     
         }
-        
-        #last-update:hover {
-        text-decoration: underline;
-        color: blue;
+         #ship-count {
+            position: absolute;
+            top: 40px; /* Jarak vertikal dari last-update */
+            right: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            z-index: 1000;
+            cursor: default;
+            #last-update:hover {
+            text-decoration: underline;
+            color: blue;
          }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="last-update" onclick="fetchDataAndUpdateMap()">Last update: N/A</div>
+    <div id="ship-count">Total ships: 0</div> <!-- Tambahkan elemen ini -->
     <script src="/js/map.js"></script>
 </body>
 </html>
