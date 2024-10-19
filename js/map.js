@@ -1,5 +1,5 @@
 // Inisialisasi peta
-        var map = L.map('map').setView([-2.548926, 118.0148634], 5); // Indonesia center
+        var map = L.map('map').setView([-2.548926, 118.0148634], 6); // Indonesia center
 
         // Basemap OpenStreetMap
         var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -28,7 +28,7 @@
             "Terrain": terrain
         };
 
-        L.control.layers(baseMaps).addTo(map);
+        L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
@@ -37,7 +37,7 @@ var markers = L.markerClusterGroup();
 function createRotatingIcon(course) {
     return L.divIcon({
          html: `<div style="transform: rotate(${course}deg); width: 30px; height: 30px;">
-                    <svg fill="#00F900" height="30px" width="30px" version="1.1" id="Layer_1" 
+                    <svg fill="#00AA16" height="30px" width="30px" version="1.1" id="Layer_1" 
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
                         viewBox="0 0 1792 1792" xml:space="preserve">
                         <path d="M187.8,1659L896,132.9L1604.2,1659L896,1285.5L187.8,1659z"/>
