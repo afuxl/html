@@ -188,13 +188,29 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
         }
         // Fungsi untuk mengatur interval auto-update
         function setUpdateInterval() {
-            clearInterval(autoUpdateInterval); // Hentikan interval yang ada
-            const interval = parseInt(document.getElementById('update-interval').value);
+            const updateInterval = document.getElementById('update-interval').value;
 
-            if (interval > 0) {
-                autoUpdateInterval = setInterval(fetchDataAndUpdateMap, interval); // Atur interval baru
+            // Hentikan interval sebelumnya jika ada
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+            }
+
+            // Simpan pengaturan ke localStorage
+            localStorage.setItem('autoUpdateInterval', updateInterval);
+
+            // Jika interval lebih dari 0, set interval baru
+            if (updateInterval > 0) {
+                autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
+                fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
             }
         }
+
+        // Ambil pengaturan auto-update saat halaman dimuat
+        window.onload = function() {
+            const savedInterval = localStorage.getItem('autoUpdateInterval') || '0'; // Ambil dari localStorage atau default ke '0'
+            document.getElementById('update-interval').value = savedInterval; // Set nilai dropdown
+            setUpdateInterval(); // Terapkan interval yang disimpan
+        };
 
         // Jalankan fetchDataAndUpdateMap() saat halaman pertama kali dimuat
         fetchDataAndUpdateMap();
