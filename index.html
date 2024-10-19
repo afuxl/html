@@ -15,7 +15,6 @@
             width: 100%;
         }
 
-        /* Pastikan ikon memiliki transparansi */
         .rotating-icon img {
             background-color: transparent;
         }
@@ -57,7 +56,6 @@
             });
         }
 
-
         function timeAgo(timestamp) {
             const now = new Date();
             const timeDifference = now - new Date(timestamp * 1000); // Selisih dalam milidetik
@@ -83,15 +81,29 @@
                 .map(c => 0x1F1E6 - 65 + c.charCodeAt()); // Mengubah kode negara menjadi emoji
             return String.fromCodePoint(...codePoints);
         }
+        // Fungsi untuk mengubah koordinat desimal ke DMS
+        function toDMS(deg, type) {
+            const d = Math.floor(Math.abs(deg));
+            const m = Math.floor((Math.abs(deg) - d) * 60);
+            const s = ((Math.abs(deg) - d - m / 60) * 3600).toFixed(2); 
+            let direction;
+
+            if (type === 'lat') {
+                direction = deg >= 0 ? 'LU' : 'LS';  // LU untuk Utara, LS untuk Selatan
+            } else {
+                direction = deg >= 0 ? 'BT' : 'BB';  // BT untuk Timur, BB untuk Barat
+            }
+
+            return `${d}°${m}'${s}" ${direction}`;
+        }
 
         function updateLastUpdateTimestamp(apiTimestamp) {
             const timestamp = new Date(apiTimestamp * 1000).toLocaleString(); // Ubah timestamp jadi locale string
             document.getElementById('last-update').innerText = `Last update: ${timestamp}`;
         }
+
         // Fungsi untuk mengambil data API dan memperbarui peta
         function fetchDataAndUpdateMap() {
-
-
             // Fetch data dari API
             fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
                 .then(response => response.json())
@@ -101,8 +113,9 @@
 
                     // Perbarui informasi "Last update" di UI
                     updateLastUpdateTimestamp(apiTimestamp);
-                // Kosongkan semua marker dari cluster sebelum menambahkan yang baru
-                 markers.clearLayers();
+
+                    // Kosongkan semua marker dari cluster sebelum menambahkan yang baru
+                    markers.clearLayers();
 
                     for (var key in currentMap) {
                         if (currentMap.hasOwnProperty(key)) {
@@ -129,27 +142,26 @@
                             if (latitude && longitude) {
                                 var marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course || 0) });
 
-                                marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
 
-                                // Event untuk menutup tooltip ketika marker diklik
-                                marker.on('click', function() {
-                                    marker.closeTooltip();
-                                });
+                                marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
+                                // Koordinat dalam format DMS
+                                var latDMS = toDMS(latitude, 'lat');
+                                var lonDMS = toDMS(longitude, 'lon');
 
                                 marker.bindPopup(
-                                    `<b>${name}</b><br>` +
+                                    `<b><i>${name}</i></b><br>` +
                                     `MMSI: ${mmsi}<br>` +
                                     `Tipe Kapal: ${shipType}<br>` +
                                     `IMO: ${imo || 'N/A'}<br>` +
-                                    `Flag: ${flagEmoji}<br>` +
+                                    `Bendera: ${flagEmoji}<br>` +
                                     `Call Sign: ${callSign || 'N/A'}<br>` +
                                     `Kecepatan: ${speed || 'N/A'} knots<br>` +
                                     `Status: ${navStatus || 'N/A'}<br>` +
                                     `Tujuan: ${destination || 'N/A'}, Eta: ${eta || 'N/A'}<br>` +
                                     `GT: ${gt || 'N/A'}<br>` +
-                                    `Data Terakhir: ${timeAgo(timestamp)}<br>` +
-                                    `Timestamp: ${new Date(timestamp * 1000).toLocaleString()} <br>` +
-                                    `Sumber: ${source || 'N/A'}<br>`
+                                    `Koordinat: ${latDMS}, ${lonDMS}<br>` +  // Koordinat dalam DM
+                                    `Data Terakhir: ${new Date(timestamp * 1000).toLocaleString()}<br>` +
+                                    `Sumber: ${source || 'N/A'} (${timeAgo(timestamp)})<br><br>`
                                 );
 
                                 markers.addLayer(marker);
