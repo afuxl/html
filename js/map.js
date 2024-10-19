@@ -11,13 +11,16 @@ var markers = L.markerClusterGroup();
 // Fungsi untuk membuat ikon kapal yang berputar
 function createRotatingIcon(course) {
     return L.divIcon({
-        html: `<img src="https://www.svgrepo.com/show/350375/location-arrow-up.svg" style="transform: rotate(${course}deg); width: 30px; height: 30px;" />`,
+        html: `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="#267F00" style="transform: rotate(${course}deg);">
+                <path d="M12 2l-10 19h20l-10-19zm0 3.41l7.44 14.09h-14.88l7.44-14.09z"/>
+               </svg>`,
         iconSize: [30, 30],
         iconAnchor: [15, 15],
         popupAnchor: [0, -15],
         className: 'rotating-icon'
     });
 }
+
 
 function timeAgo(timestamp) {
     const now = new Date();
