@@ -28,12 +28,13 @@
             font-size: 14px;
             border-radius: 5px;
             z-index: 1000;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
     <div id="map"></div>
-    <div id="last-update">Last update: N/A</div>
+    <div id="last-update" onclick="fetchDataAndUpdateMap()">Last update: N/A</div>
     <script>
         // Inisialisasi peta
         var map = L.map('map').setView([-4.100000, 122.716666], 11); // Kendari dan sekitarnya
@@ -58,7 +59,7 @@
 
         function timeAgo(timestamp) {
             const now = new Date();
-            const timeDifference = now - new Date(timestamp * 1000); // Selisih dalam milidetik
+            const timeDifference = now - new Date(timestamp * 1000);
 
             const seconds = Math.floor(timeDifference / 1000);
             const minutes = Math.floor(seconds / 60);
@@ -78,10 +79,10 @@
 
         function getFlagEmoji(countryCode) {
             const codePoints = countryCode.toUpperCase().split('')
-                .map(c => 0x1F1E6 - 65 + c.charCodeAt()); // Mengubah kode negara menjadi emoji
+                .map(c => 0x1F1E6 - 65 + c.charCodeAt());
             return String.fromCodePoint(...codePoints);
         }
-        // Fungsi untuk mengubah koordinat desimal ke DMS
+
         function toDMS(deg, type) {
             const d = Math.floor(Math.abs(deg));
             const m = Math.floor((Math.abs(deg) - d) * 60);
@@ -89,32 +90,29 @@
             let direction;
 
             if (type === 'lat') {
-                direction = deg >= 0 ? 'LU' : 'LS';  // LU untuk Utara, LS untuk Selatan
+                direction = deg >= 0 ? 'LU' : 'LS';
             } else {
-                direction = deg >= 0 ? 'BT' : 'BB';  // BT untuk Timur, BB untuk Barat
+                direction = deg >= 0 ? 'BT' : 'BB';
             }
 
             return `${d}°${m}'${s}" ${direction}`;
         }
 
         function updateLastUpdateTimestamp(apiTimestamp) {
-            const timestamp = new Date(apiTimestamp * 1000).toLocaleString(); // Ubah timestamp jadi locale string
+            const timestamp = new Date(apiTimestamp * 1000).toLocaleString();
             document.getElementById('last-update').innerText = `Last update: ${timestamp}`;
         }
 
         // Fungsi untuk mengambil data API dan memperbarui peta
         function fetchDataAndUpdateMap() {
-            // Fetch data dari API
             fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
                 .then(response => response.json())
                 .then(data => {
                     var currentMap = data.currentMap;
                     var apiTimestamp = data.timestamp;
 
-                    // Perbarui informasi "Last update" di UI
                     updateLastUpdateTimestamp(apiTimestamp);
 
-                    // Kosongkan semua marker dari cluster sebelum menambahkan yang baru
                     markers.clearLayers();
 
                     for (var key in currentMap) {
@@ -142,14 +140,13 @@
                             if (latitude && longitude) {
                                 var marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course || 0) });
 
-
                                 marker.bindTooltip(`<b>${name}</b>`, { permanent: false, direction: "top", className: 'ship-tooltip' });
-                                // Koordinat dalam format DMS
+
                                 var latDMS = toDMS(latitude, 'lat');
                                 var lonDMS = toDMS(longitude, 'lon');
 
                                 marker.bindPopup(
-                                    `<b><i>${name}</i></b><br>` +
+                                    `<b><i>${name}</i></b><br><br>` +
                                     `MMSI: ${mmsi}<br>` +
                                     `Tipe Kapal: ${shipType}<br>` +
                                     `IMO: ${imo || 'N/A'}<br>` +
@@ -159,7 +156,7 @@
                                     `Status: ${navStatus || 'N/A'}<br>` +
                                     `Tujuan: ${destination || 'N/A'}, Eta: ${eta || 'N/A'}<br>` +
                                     `GT: ${gt || 'N/A'}<br>` +
-                                    `Koordinat: ${latDMS}, ${lonDMS}<br>` +  // Koordinat dalam DM
+                                    `Koordinat: ${latDMS}, ${lonDMS}<br>` +
                                     `Data Terakhir: ${new Date(timestamp * 1000).toLocaleString()}<br>` +
                                     `Sumber: ${source || 'N/A'} (${timeAgo(timestamp)})<br><br>`
                                 );
@@ -169,17 +166,13 @@
                         }
                     }
 
-                    // Tambahkan cluster ke peta
                     map.addLayer(markers);
                 })
                 .catch(error => console.error('Error fetching data:', error));
         }
 
-        // Panggil fungsi fetchDataAndUpdateMap untuk pertama kali
+        // Jalankan fetchDataAndUpdateMap() saat halaman pertama kali dimuat
         fetchDataAndUpdateMap();
-
-        // Panggil fungsi fetchDataAndUpdateMap setiap 30 detik
-        setInterval(fetchDataAndUpdateMap, 30000);
 
     </script>
 </body>
