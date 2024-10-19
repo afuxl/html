@@ -11,8 +11,15 @@
     <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
         #map {
-            height: 100vh;
+            flex-grow: 1; /* Peta akan mengambil seluruh ruang yang tersisa */
             width: 100%;
         }
 
