@@ -12,7 +12,7 @@ var markers = L.markerClusterGroup();
 function createRotatingIcon(course) {
     return L.divIcon({
          html: `<div style="transform: rotate(${course}deg); width: 30px; height: 30px;">
-                    <svg fill="#267F00" height="30px" width="30px" version="1.1" id="Layer_1" 
+                    <svg fill="#00F900" height="30px" width="30px" version="1.1" id="Layer_1" 
                         xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
                         viewBox="0 0 1792 1792" xml:space="preserve">
                         <path d="M187.8,1659L896,132.9L1604.2,1659L896,1285.5L187.8,1659z"/>
