@@ -57,12 +57,38 @@
             text-decoration: underline;
             color: blue;
          }
+
+        /* Opsi Auto Update */
+        #auto-update {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 5px;
+            border-radius: 5px;
+            z-index: 1000;
+            font-size: 14px;
+        }
+
+        #auto-update select {
+            margin: 0 5px;
+        }
     </style>
 </head>
 <body>
     <div id="map"></div>
     <div id="last-update" onclick="fetchDataAndUpdateMap()">Last update: N/A</div>
     <div id="ship-count">Total ships: 0</div> <!-- Tambahkan elemen ini -->
+    <div id="auto-update">
+        Auto-update: 
+        <select id="update-interval" onchange="setUpdateInterval()">
+            <option value="0">Off</option>
+            <option value="30000">30 detik</option>
+            <option value="60000">1 menit</option>
+            <option value="120000">2 menit</option>
+            <option value="300000">5 menit</option>
+        </select>
+    </div>
     <script src="/js/map.js"></script>
 </body>
 </html>
