@@ -185,6 +185,15 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
                 
                 .catch(error => console.error('Error fetching data:', error));
         }
+        // Fungsi untuk mengatur interval auto-update
+        function setUpdateInterval() {
+            clearInterval(autoUpdateInterval); // Hentikan interval yang ada
+            const interval = parseInt(document.getElementById('update-interval').value);
+
+            if (interval > 0) {
+                autoUpdateInterval = setInterval(fetchDataAndUpdateMap, interval); // Atur interval baru
+            }
+        }
 
         // Jalankan fetchDataAndUpdateMap() saat halaman pertama kali dimuat
         fetchDataAndUpdateMap();
