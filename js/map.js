@@ -32,6 +32,7 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
         // Inisialisasi marker cluster
         var markers = L.markerClusterGroup();
+        var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 
         // Fungsi untuk membuat ikon kapal yang berputar
         function createRotatingIcon(course) {
