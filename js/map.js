@@ -107,7 +107,7 @@ function countVisibleShips() {
         }
     });
     // Update teks jumlah kapal yang terlihat
-    document.getElementById('ship-count').innerText = `Total visible ships: ${visibleMarkers}`;
+    document.getElementById('ship-count').innerText = `TOTAL VISIBLE SHIPS: ${visibleMarkers}`;
 }
 
 // Event listener untuk memperbarui jumlah kapal terlihat saat peta digerakkan atau di-zoom
