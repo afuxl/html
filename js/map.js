@@ -115,7 +115,19 @@ map.on('moveend', countVisibleShips);
 map.on('zoomend', countVisibleShips);
 
 // Fungsi untuk mengambil data API dan memperbarui peta
+function showLoadingScreen() {
+    document.getElementById('loading-screen').style.display = 'flex'; // Tampilkan loading screen
+}
+
+// Fungsi untuk menyembunyikan loading screen
+function hideLoadingScreen() {
+    document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
+}
+
+// Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
+    showLoadingScreen(); // Tampilkan loading screen sebelum mengambil data
+
     fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
         .then(response => response.json())
         .then(data => {
@@ -139,7 +151,10 @@ function fetchDataAndUpdateMap() {
             map.addLayer(markers); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
         })
-        .catch(error => console.error('Error fetching data:', error));
+        .catch(error => console.error('Error fetching data:', error))
+        .finally(() => {
+            hideLoadingScreen(); // Sembunyikan loading screen setelah data dimuat
+        });
 }
 
 // Fungsi untuk menambahkan marker kapal
