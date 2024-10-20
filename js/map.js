@@ -171,7 +171,7 @@ function addShipMarker(ship) {
     const name = ship[8] || mmsi;
     const latitude = ship[4];
     const longitude = ship[3];
-    const course = ship[1] || 0;
+    const course = ship[17] || 0;
 
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course) });
