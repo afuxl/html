@@ -1,4 +1,4 @@
-/ Inisialisasi peta
+// Inisialisasi peta
 var map = L.map('map').setView([-2.548926, 118.0148634], 5); // Indonesia center
 
 // Basemap OpenStreetMap
