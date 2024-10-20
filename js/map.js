@@ -115,6 +115,9 @@ map.on('moveend', countVisibleShips);
 map.on('zoomend', countVisibleShips);
 
 // Fungsi untuk mengambil data API dan memperbarui peta
+var isFirstLoad = true; // Variabel untuk melacak apakah ini pertama kali data diambil
+
+// Fungsi untuk menampilkan loading screen
 function showLoadingScreen() {
     document.getElementById('loading-screen').style.display = 'flex'; // Tampilkan loading screen
 }
@@ -126,7 +129,9 @@ function hideLoadingScreen() {
 
 // Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
-    showLoadingScreen(); // Tampilkan loading screen sebelum mengambil data
+    if (isFirstLoad) {
+        showLoadingScreen(); // Hanya tampilkan loading screen pada pemuatan pertama kali
+    }
 
     fetch('https://i-motion.dephub.go.id/api/localcurrentmap')
         .then(response => response.json())
@@ -153,7 +158,10 @@ function fetchDataAndUpdateMap() {
         })
         .catch(error => console.error('Error fetching data:', error))
         .finally(() => {
-            hideLoadingScreen(); // Sembunyikan loading screen setelah data dimuat
+            if (isFirstLoad) {
+                hideLoadingScreen(); // Sembunyikan loading screen setelah data pertama kali dimuat
+                isFirstLoad = false; // Set menjadi false agar tidak menampilkan loading screen lagi
+            }
         });
 }
 
