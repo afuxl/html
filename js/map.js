@@ -260,10 +260,16 @@ function searchShip() {
         return;
     }
 
-    // Filter kapal berdasarkan nama
+    // Filter kapal berdasarkan nama, MMSI, atau call sign
     const filteredShips = Object.values(shipData).filter(ship => {
-        const name = ship[8] || ship[0]; // Gunakan MMSI jika nama tidak ada
-        return name.toLowerCase().includes(searchValue);
+        const name = ship[8] || ''; // Nama kapal
+        const mmsi = ship[0] || ''; // MMSI kapal
+        const callSign = ship[9] || ''; // Call sign kapal
+
+        // Cek apakah searchValue cocok dengan salah satu dari tiga data
+        return name.toLowerCase().includes(searchValue) || 
+               mmsi.toLowerCase().includes(searchValue) || 
+               callSign.toLowerCase().includes(searchValue);
     });
 
     if (filteredShips.length > 0) {
@@ -271,10 +277,13 @@ function searchShip() {
 
         filteredShips.forEach(ship => {
             const name = ship[8] || ship[0]; // Nama kapal atau MMSI
+            const mmsi = ship[0]; // MMSI
+            const callSign = ship[9] || 'N/A'; // Call sign atau "N/A" jika tidak ada
+
             const suggestionItem = document.createElement('li');
             suggestionItem.style.padding = '5px';
             suggestionItem.style.cursor = 'pointer';
-            suggestionItem.textContent = name;
+            suggestionItem.textContent = `${name} (MMSI: ${mmsi}, Call Sign: ${callSign})`;
 
             // Ketika saran diklik, fokuskan peta pada kapal tersebut
             suggestionItem.onclick = function() {
@@ -289,6 +298,7 @@ function searchShip() {
         notFoundMessage.style.display = 'block'; // Tampilkan pesan jika tidak ada kapal
     }
 }
+
 
 // Fungsi untuk fokus pada kapal dan menampilkan popup
 function focusOnShip(ship) {
