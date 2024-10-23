@@ -351,6 +351,11 @@ let autoUpdateInterval;
 let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
 
 // Fungsi untuk mengatur interval auto-update
+// Variabel untuk menyimpan interval auto-update
+let autoUpdateInterval;
+let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
+
+// Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
     const updateInterval = parseInt(document.getElementById('update-interval').value);
 
@@ -362,17 +367,21 @@ function setUpdateInterval() {
     // Simpan pengaturan ke localStorage
     localStorage.setItem('autoUpdateInterval', updateInterval);
 
-    // Jika interval lebih dari 0, set interval baru
+    // Jika interval off (0), panggil fetchDataAndUpdateMap sekali pada pemuatan pertama kali
+    if (updateInterval === 0 && isFirstLoad) {
+        fetchDataAndUpdateMap(); // Panggil hanya sekali saat halaman pertama dimuat
+    }
+
+    // Jika interval lebih dari 0, set interval untuk auto-update
     if (updateInterval > 0) {
-        // Jika ini bukan pemuatan pertama, baru set interval tanpa panggil fetchDataAndUpdateMap
-        if (!isFirstLoad) {
-            autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-        } else {
-            // Pada pemuatan pertama kali, langsung panggil fetchDataAndUpdateMap
+        if (isFirstLoad) {
             fetchDataAndUpdateMap().then(() => {
-                // Setelah pemuatan pertama selesai, set interval untuk berikutnya
+                // Setelah pemuatan pertama, atur interval berikutnya
                 autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
             });
+        } else {
+            // Jika bukan pemuatan pertama, langsung set interval
+            autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
         }
     }
 }
@@ -385,6 +394,7 @@ window.onload = function() {
 
     isFirstLoad = false; // Tandai bahwa pemuatan pertama telah selesai
 };
+
 
 
 // Pencarian kapal
