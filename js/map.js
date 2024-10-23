@@ -393,7 +393,7 @@ window.onload = function() {
     setUpdateInterval(); // Atur interval
 
     isFirstLoad = false; // Tandai bahwa pemuatan pertama telah selesai
-};
+}
 
 
 
