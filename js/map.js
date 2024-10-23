@@ -351,7 +351,8 @@ autoUpdateInterval = setInterval(fetchDataAndUpdateMap, 60000);
 // Panggil fetchDataAndUpdateMap pertama kali
 fetchDataAndUpdateMap();
 
-unction searchShip() {
+// Pencarian kapal
+function searchShip() {
     const searchValue = document.getElementById('ship-search').value.toLowerCase();
     const suggestionBox = document.getElementById('ship-suggestions');
     const notFoundMessage = document.getElementById('not-found-message');
