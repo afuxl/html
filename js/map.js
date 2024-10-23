@@ -197,8 +197,8 @@ function hideLoadingScreen() {
     document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
 }
 
-// Variabel untuk menyimpan status live data
 let liveDataStatus = 'on'; // Default ke "on"
+let headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 
 // Fungsi untuk toggle live data (tanpa memanggil ulang data)
 function toggleLiveData() {
@@ -209,6 +209,7 @@ function toggleLiveData() {
 // Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
 function filterShipMarkers() {
     markers.clearLayers(); // Kosongkan semua marker yang ada
+    removeHeadingLines(); // Pastikan heading line dihapus
 
     // Lakukan filter berdasarkan status live data
     Object.values(shipData).forEach(ship => {
@@ -277,51 +278,52 @@ function addShipMarker(ship) {
 
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
         marker.bindPopup(createPopupContent(ship));
-        marker.shipData = ship; // Simpan data kapal ke dalam marker
         markers.addLayer(marker);
 
+        // Simpan data kapal untuk marker ini
+        marker.shipData = ship;
+
         // Periksa level zoom sebelum menambahkan heading line
-        if (heading !== null && heading !== undefined) {
-            const zoomLevel = map.getZoom();
-            if (zoomLevel >= 12) { // Tampilkan heading line hanya jika zoom level 12 atau lebih
-                const headingLine = createHeadingLine(latitude, longitude, heading);
-                map.addLayer(headingLine); // Tambahkan garis heading ke peta
-                headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
-            }
+        const zoomLevel = map.getZoom();
+        if (zoomLevel >= 12 && heading !== null && heading !== undefined) { 
+            const headingLine = createHeadingLine(latitude, longitude, heading);
+            headingLines[mmsi] = headingLine;
+            map.addLayer(headingLine); // Tambahkan garis heading ke peta
         }
     }
 }
 
 // Fungsi untuk membuat garis heading kapal
-function createHeadingLine(latitude, longitude, heading) {
-    const length = 0.03; // Panjang garis heading dalam derajat
-    const radian = (heading * Math.PI) / 180;
-    const lat2 = latitude + length * Math.cos(radian);
-    const lon2 = longitude + length * Math.sin(radian);
-    return L.polyline([[latitude, longitude], [lat2, lon2]], { color: 'red', weight: 2 });
+function createHeadingLine(lat, lon, heading) {
+    const radian = (heading - 90) * Math.PI / 180;
+    const distance = 0.1; // Panjang garis heading dalam satuan derajat (kira-kira 11 km)
+    const endLat = lat + distance * Math.cos(radian);
+    const endLon = lon + distance * Math.sin(radian);
+
+    return L.polyline([[lat, lon], [endLat, endLon]], { color: 'red', weight: 2 });
 }
 
-// Fungsi untuk menghapus semua heading lines dari peta
+// Fungsi untuk menghapus semua heading line
 function removeHeadingLines() {
-    for (const mmsi in headingLines) {
+    for (let mmsi in headingLines) {
         if (headingLines.hasOwnProperty(mmsi)) {
             map.removeLayer(headingLines[mmsi]);
         }
     }
-    headingLines = {}; // Kosongkan objek headingLines
+    headingLines = {}; // Reset headingLines
 }
 
-// Event listener untuk memperbarui tampilan heading line saat zoom berubah
-map.on('zoomend', function() {
+function checkHeadingLines() {
     const zoomLevel = map.getZoom();
 
-    // Hapus semua heading line terlebih dahulu
-    removeHeadingLines();
+    // Hapus semua heading line jika zoom level kurang dari 12
+    if (zoomLevel < 12) {
+        removeHeadingLines();
+    } else {
+        // Tambahkan kembali heading line jika zoom level 12 atau lebih
+        markers.eachLayer(marker => {
+            const ship = marker.shipData; // Ambil data kapal yang terkait dengan marker
 
-    // Tambahkan heading line jika zoom level cukup tinggi
-    if (zoomLevel >= 16) {
-        markers.eachLayer(function(marker) {
-            const ship = marker.shipData;
             if (ship) {
                 const heading = ship[2];
                 const latitude = ship[4];
@@ -329,14 +331,14 @@ map.on('zoomend', function() {
 
                 if (heading !== null && heading !== undefined) {
                     const headingLine = createHeadingLine(latitude, longitude, heading);
+                    headingLines[ship[0]] = headingLine;
                     map.addLayer(headingLine);
-                    headingLines[ship[0]] = headingLine; // Simpan heading line
                 }
             }
         });
     }
-});
-
+}
+map.on('zoomend', checkHeadingLines);
 // Fungsi untuk membuat konten popup kapal
 function createPopupContent(ship) {
     const mmsi = ship[0];
