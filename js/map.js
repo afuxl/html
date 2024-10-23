@@ -351,11 +351,6 @@ let autoUpdateInterval;
 let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
 
 // Fungsi untuk mengatur interval auto-update
-// Variabel untuk menyimpan interval auto-update
-let autoUpdateInterval;
-let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
-
-// Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
     const updateInterval = parseInt(document.getElementById('update-interval').value);
 
