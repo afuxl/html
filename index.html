@@ -94,16 +94,22 @@
       <ul id="ship-suggestions" style="position: absolute; top: 35px; left: 0; background-color: white; list-style-type: none; padding: 0; margin: 0; width: 100%; max-height: 150px; overflow-y: auto; border: 1px solid #ccc; display: none;"></ul>
       <div id="not-found-message" style="position: absolute; top: 35px; left: 0; background-color: white; width: 100%; padding: 10px; border: 1px solid #ccc; display: none;">No ships found</div>
     </div>
-    <div id="auto-update">
-        AUTO-UPDATE: 
-        <select id="update-interval" onchange="setUpdateInterval()">
-            <option value="0">Off</option>
-            <option value="30000">30 detik</option>
-            <option value="60000">1 menit</option>
-            <option value="120000">2 menit</option>
-            <option value="300000">5 menit</option>
-        </select>
-    </div>
+<div id="auto-update">
+    AUTO-UPDATE: 
+    <select id="update-interval" onchange="setUpdateInterval()">
+        <option value="0">Off</option>
+        <option value="30000">30 detik</option>
+        <option value="60000">1 menit</option>
+        <option value="120000">2 menit</option>
+        <option value="300000">5 menit</option>
+    </select>
+    <br>
+    LIVE DATA: 
+    <select id="live-data-toggle" onchange="toggleLiveData()">
+        <option value="on">On</option>
+        <option value="off">Off</option>
+    </select>
+</div>
     <script src="/js/map.js"></script>
 </body>
 </html>
