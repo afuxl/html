@@ -244,7 +244,6 @@ function fetchDataAndUpdateMap() {
 
             updateLastUpdateTimestamp(apiTimestamp);
             filterShipMarkers(); // Filter data setelah diperbarui
-
             markers.clearLayers(); // Kosongkan marker yang ada
             removeHeadingLines(); // Hapus garis heading sebelumnya
 
@@ -287,7 +286,7 @@ function addShipMarker(ship) {
         // Periksa level zoom sebelum menambahkan heading line
         if (heading !== null && heading !== undefined) {
             const zoomLevel = map.getZoom();
-            if (zoomLevel >= 12) { // Tampilkan heading line hanya jika zoom level 12 atau lebih
+            if (zoomLevel >= 14) { // Tampilkan heading line hanya jika zoom level 10 atau lebih
                 const headingLine = createHeadingLine(latitude, longitude, heading);
                 map.addLayer(headingLine); // Tambahkan garis heading ke peta
                 headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
@@ -323,7 +322,7 @@ map.on('zoomend', function() {
     removeHeadingLines();
 
     // Tambahkan heading line jika zoom level cukup tinggi
-    if (zoomLevel >= 16) {
+    if (zoomLevel >= 14) {
         markers.eachLayer(function(marker) {
             const ship = marker.shipData;
             if (ship) {
@@ -487,6 +486,7 @@ function updateMapWithFilteredData(liveDataStatus) {
 
 // Call toggleLiveData to initialize filtering on page load
 toggleLiveData();
+
 // Fungsi untuk fokus pada kapal dan menampilkan popup
 function focusOnShip(ship) {
     const latitude = ship[4];
