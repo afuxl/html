@@ -32,10 +32,10 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
+var headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
 
-// Fungsi untuk membuat ikon kapal yang berputar
 // Fungsi untuk membuat ikon kapal yang berputar berdasarkan tipe kapal
 function createRotatingIcon(course, shipType) {
     let color = '#00AA16'; // Warna default jika tidak ada kecocokan
@@ -58,7 +58,7 @@ function createRotatingIcon(course, shipType) {
             color = '#FF00FF'; // Magenta
             break;
         case 'platform':
-            color = '#FF00FF'; // Magenta (Sama seperti offshore dalam gambar)
+            color = '#FF00FF'; // Magenta (Sama seperti offshore)
             break;
         case 'non-merchant':
             color = '#F0FFFF'; // Putih
@@ -215,6 +215,7 @@ function fetchDataAndUpdateMap() {
             updateLastUpdateTimestamp(apiTimestamp);
 
             markers.clearLayers(); // Kosongkan marker yang ada
+            removeHeadingLines(); // Hapus garis heading sebelumnya
 
             for (var key in currentMap) {
                 if (currentMap.hasOwnProperty(key)) {
@@ -225,244 +226,120 @@ function fetchDataAndUpdateMap() {
 
             map.addLayer(markers); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
-
-            // Jika zoom maksimal, tambahkan heading line
-            if (map.getZoom() === 19) {
-                Object.values(currentMap).forEach(ship => {
-                    const headingLine = createHeadingLine(ship);
-                    if (headingLine) {
-                        headingLine.addTo(map);
-                    }
-                });
-            }
         })
         .catch(error => console.error('Error fetching data:', error))
         .finally(() => {
             if (isFirstLoad) {
                 hideLoadingScreen(); // Sembunyikan loading screen setelah data pertama kali dimuat
-                isFirstLoad = false; // Set menjadi false agar tidak menampilkan loading screen lagi
+                isFirstLoad = false; // Tandai bahwa pemuatan pertama telah selesai
             }
         });
 }
 
-
-// Fungsi untuk menambahkan marker kapal
+// Fungsi untuk menambahkan marker kapal dan heading line
 function addShipMarker(ship) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
     const latitude = ship[4];
     const longitude = ship[3];
     const course = ship[17] || 0;
+    const heading = ship[2]; // Arah heading kapal
 
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
-        marker.bindPopup(createPopupContent(ship)); // Gunakan fungsi popup yang sama
+        marker.bindPopup(createPopupContent(ship));
+        marker.shipData = ship; // Simpan data kapal ke dalam marker
         markers.addLayer(marker);
+
+        // Periksa level zoom sebelum menambahkan heading line
+        if (heading !== null && heading !== undefined) {
+            const zoomLevel = map.getZoom();
+            if (zoomLevel >= 12) { // Tampilkan heading line hanya jika zoom level 12 atau lebih
+                const headingLine = createHeadingLine(latitude, longitude, heading);
+                map.addLayer(headingLine); // Tambahkan garis heading ke peta
+                headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
+            }
+        }
     }
 }
 
-// Fungsi untuk membuat konten popup
-function createPopupContent(ship) {
-    const mmsi = ship[0];
-    const shipType = ship[10];
-    const callSign = ship[9];
-    const imo = ship[11];
-    const flag = ship[14];
-    const speed = ship[7];
-    const navStatus = ship[15];
-    const destination = ship[18];
-    const gt = ship[13];
-    const timestamp = ship[5];
-    const source = ship[6];
+// Fungsi untuk membuat garis heading kapal
+function createHeadingLine(latitude, longitude, heading) {
+    const length = 0.03; // Panjang garis heading dalam derajat
+    const radian = (heading * Math.PI) / 180;
+    const lat2 = latitude + length * Math.cos(radian);
+    const lon2 = longitude + length * Math.sin(radian);
+    return L.polyline([[latitude, longitude], [lat2, lon2]], { color: 'red', weight: 2 });
+}
 
-    const flagEmoji = flag ? getFlagEmoji(flag) : "-";
-    const latDMS = toDMS(ship[4], 'lat');
-    const lonDMS = toDMS(ship[3], 'lon');
+// Fungsi untuk menghapus semua heading lines dari peta
+function removeHeadingLines() {
+    for (const mmsi in headingLines) {
+        if (headingLines.hasOwnProperty(mmsi)) {
+            map.removeLayer(headingLines[mmsi]);
+        }
+    }
+    headingLines = {}; // Kosongkan objek headingLines
+}
+
+// Event listener untuk memperbarui tampilan heading line saat zoom berubah
+map.on('zoomend', function() {
+    const zoomLevel = map.getZoom();
+
+    // Hapus semua heading line terlebih dahulu
+    removeHeadingLines();
+
+    // Tambahkan heading line jika zoom level cukup tinggi
+    if (zoomLevel >= 12) {
+        markers.eachLayer(function(marker) {
+            const ship = marker.shipData;
+            if (ship) {
+                const heading = ship[2];
+                const latitude = ship[4];
+                const longitude = ship[3];
+
+                if (heading !== null && heading !== undefined) {
+                    const headingLine = createHeadingLine(latitude, longitude, heading);
+                    map.addLayer(headingLine);
+                    headingLines[ship[0]] = headingLine; // Simpan heading line
+                }
+            }
+        });
+    }
+});
+
+// Fungsi untuk membuat konten popup kapal
+function createPopupContent(ship) {
+    const name = ship[8] || 'Unknown';
+    const countryFlag = getFlagEmoji(ship[12]) || '';
+    const country = ship[12] || 'Unknown';
+    const shipType = ship[10] || 'Unknown';
+    const mmsi = ship[0] || 'Unknown';
+    const latitude = toDMS(ship[4], 'lat') || 'Unknown';
+    const longitude = toDMS(ship[3], 'lng') || 'Unknown';
+    const speed = (ship[5] || 'Unknown') + ' knots';
+    const lastUpdated = timeAgo(ship[6]) || 'Unknown';
+    const course = (ship[17] || 'Unknown') + '°';
 
     return `
-        <center><b><i>${ship[8] || mmsi}</i></b><br><br></center>
-        MMSI: ${mmsi}<br>
-        Tipe Kapal: ${shipType}<br>
-        IMO: ${imo || '-'}<br>
-        Bendera: ${flagEmoji}<br>
-        Call Sign: ${callSign || '-'}<br>
-        Kecepatan: ${speed || '-'} knots<br>
-        Status: ${navStatus || '-'}<br>
-        Tujuan: ${destination || '-'}<br>
-        GT: ${gt || '-'}<br>
-        Koordinat: ${latDMS}, ${lonDMS}<br>
-        Data Terakhir: ${new Date(timestamp * 1000).toLocaleString()}<br>
-        Sumber: ${source || '-'} (${timeAgo(timestamp)})<br>
+        <div>
+            <strong>${name}</strong><br/>
+            <strong>Country:</strong> ${countryFlag} ${country}<br/>
+            <strong>Type:</strong> ${shipType}<br/>
+            <strong>MMSI:</strong> ${mmsi}<br/>
+            <strong>Latitude:</strong> ${latitude}<br/>
+            <strong>Longitude:</strong> ${longitude}<br/>
+            <strong>Speed:</strong> ${speed}<br/>
+            <strong>Course:</strong> ${course}<br/>
+            <strong>Last updated:</strong> ${lastUpdated}
+        </div>
     `;
 }
 
-// Fungsi untuk mengatur interval auto-update
-function setUpdateInterval() {
-    const updateInterval = document.getElementById('update-interval').value;
+// Otomatis perbarui data setiap 60 detik
+autoUpdateInterval = setInterval(fetchDataAndUpdateMap, 60000);
 
-    // Hentikan interval sebelumnya jika ada
-    if (autoUpdateInterval) {
-        clearInterval(autoUpdateInterval);
-    }
-
-    // Simpan pengaturan ke localStorage
-    localStorage.setItem('autoUpdateInterval', updateInterval);
-
-    // Jika interval lebih dari 0, set interval baru
-    if (updateInterval > 0) {
-        autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-        fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
-    }
-}
-
-// Ambil pengaturan auto-update saat halaman dimuat
-window.onload = function() {
-    const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
-    document.getElementById('update-interval').value = savedInterval; // Set nilai input
-    setUpdateInterval(); // Atur interval
-
-    // Ambil data kapal saat halaman dimuat
-    fetchDataAndUpdateMap();
-};
-
-// Pencarian kapal
-function searchShip() {
-    const searchValue = document.getElementById('ship-search').value.toLowerCase();
-    const suggestionBox = document.getElementById('ship-suggestions');
-    const notFoundMessage = document.getElementById('not-found-message');
-
-    suggestionBox.innerHTML = ''; // Kosongkan saran sebelumnya
-    suggestionBox.style.display = 'none'; // Sembunyikan saran jika tidak ada yang cocok
-    notFoundMessage.style.display = 'none'; // Sembunyikan pesan "No ships found"
-
-    if (searchValue === '') {
-        return;
-    }
-
-    // Filter kapal berdasarkan nama, MMSI, atau call sign
-    const filteredShips = Object.values(shipData).filter(ship => {
-        const name = ship[8] || ''; // Nama kapal
-        const mmsi = ship[0] || ''; // MMSI kapal
-        const callSign = ship[9] || ''; // Call sign kapal
-
-        // Cek apakah searchValue cocok dengan salah satu dari tiga data
-        return name.toLowerCase().includes(searchValue) || 
-               mmsi.toLowerCase().includes(searchValue) || 
-               callSign.toLowerCase().includes(searchValue);
-    });
-
-    if (filteredShips.length > 0) {
-        suggestionBox.style.display = 'block'; // Tampilkan daftar saran
-
-        filteredShips.forEach(ship => {
-            const name = ship[8] || ship[0]; // Nama kapal atau MMSI
-            const mmsi = ship[0]; // MMSI
-            const callSign = ship[9] || '-'; // Call sign atau "N/A" jika tidak ada
-
-            const suggestionItem = document.createElement('li');
-            suggestionItem.style.padding = '5px';
-            suggestionItem.style.cursor = 'pointer';
-            suggestionItem.textContent = `${name} (MMSI: ${mmsi}, Call Sign: ${callSign})`;
-
-            // Ketika saran diklik, fokuskan peta pada kapal tersebut
-            suggestionItem.onclick = function() {
-                document.getElementById('ship-search').value = name;
-                suggestionBox.style.display = 'none'; // Sembunyikan saran setelah memilih
-                focusOnShip(ship); // Fokus pada kapal yang dipilih
-            };
-
-            suggestionBox.appendChild(suggestionItem); // Tambahkan saran ke daftar
-        });
-    } else {
-        notFoundMessage.style.display = 'block'; // Tampilkan pesan jika tidak ada kapal
-    }
-}
-// Fungsi untuk menambahkan marker kapal dan heading line
-// Fungsi untuk menambahkan marker kapal
-function addShipMarker(ship) {
-    const mmsi = ship[0];
-    const name = ship[8] || mmsi;
-    const latitude = ship[4];
-    const longitude = ship[3];
-    const course = ship[17] || 0;
-
-    if (latitude && longitude) {
-        const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
-
-        marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
-        marker.bindPopup(createPopupContent(ship)); // Gunakan fungsi popup yang sama
-        markers.addLayer(marker);
-
-        // Tambahkan heading line hanya jika zoom maksimal
-        if (map.getZoom() === 19) {
-            const headingLine = createHeadingLine(ship);
-            if (headingLine) {
-                headingLine.addTo(map);
-            }
-        }
-    }
-}
-
-
-// Fungsi untuk membuat garis heading
-// Fungsi untuk membuat garis heading dari posisi kapal
-function createHeadingLine(ship) {
-    const latitude = ship[4];
-    const longitude = ship[3];
-    const heading = ship[2]; // Ambil data heading
-
-    if (heading === null || heading === undefined || latitude === undefined || longitude === undefined) {
-        return null; // Jika data tidak lengkap, tidak membuat garis
-    }
-
-    const headingLength = 0.5; // Panjang garis dalam km (500 meter)
-    const endPoint = calculateDestinationPoint(latitude, longitude, heading, headingLength);
-
-    // Buat polyline dari posisi kapal ke arah heading
-    return L.polyline([[latitude, longitude], endPoint], {
-        color: 'red', // Warna garis
-        weight: 2, // Ketebalan garis
-        opacity: 0.8, // Transparansi garis
-    });
-}
-
-// Fungsi untuk menghitung titik tujuan berdasarkan heading dan jarak
-function calculateDestinationPoint(lat, lon, heading, distanceKm) {
-    const R = 6371; // Radius bumi dalam kilometer
-    const rad = Math.PI / 180;
-    const bearing = heading * rad; // Konversi heading ke radian
-
-    const lat1 = lat * rad;
-    const lon1 = lon * rad;
-
-    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceKm / R) +
-        Math.cos(lat1) * Math.sin(distanceKm / R) * Math.cos(bearing));
-
-    const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(distanceKm / R) * Math.cos(lat1),
-        Math.cos(distanceKm / R) - Math.sin(lat1) * Math.sin(lat2));
-
-    return [lat2 / rad, lon2 / rad]; // Kembalikan sebagai [latitude, longitude]
-}
-
-
-
-// Fungsi untuk fokus pada kapal dan menampilkan popup
-function focusOnShip(ship) {
-    const latitude = ship[4];
-    const longitude = ship[3];
-
-    // Fokus pada posisi kapal
-    map.setView([latitude, longitude], 16); // Atur zoom level sesuai kebutuhan
-
-    // Temukan marker yang sesuai dan buka popup-nya
-    markers.eachLayer(marker => {
-        if (marker.getLatLng().lat === latitude && marker.getLatLng().lng === longitude) {
-            marker.openPopup(); // Buka popup untuk marker kapal
-        }
-    });
-}
-
-// Event listeners
-document.getElementById('ship-search').addEventListener('input', searchShip);
+// Panggil fetchDataAndUpdateMap pertama kali
+fetchDataAndUpdateMap();
