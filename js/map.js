@@ -345,14 +345,8 @@ function createPopupContent(ship) {
     `;
 }
 
-// Fungsi untuk mengatur interval auto-update
-// Variabel untuk menyimpan interval auto-update
-let autoUpdateInterval;
-let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
-
-// Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
-    const updateInterval = parseInt(document.getElementById('update-interval').value);
+    const updateInterval = document.getElementById('update-interval').value;
 
     // Hentikan interval sebelumnya jika ada
     if (autoUpdateInterval) {
@@ -362,33 +356,23 @@ function setUpdateInterval() {
     // Simpan pengaturan ke localStorage
     localStorage.setItem('autoUpdateInterval', updateInterval);
 
-    // Jika interval off (0), panggil fetchDataAndUpdateMap sekali pada pemuatan pertama kali
-    if (updateInterval === 0 && isFirstLoad) {
-        fetchDataAndUpdateMap(); // Panggil hanya sekali saat halaman pertama dimuat
-    }
-
-    // Jika interval lebih dari 0, set interval untuk auto-update
+    // Jika interval lebih dari 0, set interval baru
     if (updateInterval > 0) {
-        if (isFirstLoad) {
-            fetchDataAndUpdateMap().then(() => {
-                // Setelah pemuatan pertama, atur interval berikutnya
-                autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-            });
-        } else {
-            // Jika bukan pemuatan pertama, langsung set interval
-            autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-        }
+        autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
+        fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
     }
 }
 
-// Fungsi yang akan dipanggil saat halaman pertama kali dimuat
+// Ambil pengaturan auto-update saat halaman dimuat
 window.onload = function() {
     const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
     document.getElementById('update-interval').value = savedInterval; // Set nilai input
     setUpdateInterval(); // Atur interval
 
-    isFirstLoad = false; // Tandai bahwa pemuatan pertama telah selesai
-}
+    // Ambil data kapal saat halaman dimuat
+    fetchDataAndUpdateMap();
+};
+
 
 
 
