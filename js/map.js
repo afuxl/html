@@ -222,7 +222,8 @@ function fetchDataAndUpdateMap() {
                     addShipMarker(ship); // Tambahkan marker untuk kapal
                 }
             }
-            filterShipMarkers(); // Filter data setelah diperbarui
+          //  filterShipMarkers(); // Filter data setelah diperbarui
+            toggleLiveData();
             map.addLayer(markers); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
         })
@@ -455,11 +456,6 @@ function updateMapWithFilteredData(liveDataStatus) {
     countVisibleShips(); // Update the visible ship count
 }
 
-// Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
-
-
-// Call toggleLiveData to initialize filtering on page load
-toggleLiveData();
 
 // Fungsi untuk fokus pada kapal dan menampilkan popup
 function focusOnShip(ship) {
