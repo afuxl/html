@@ -196,7 +196,7 @@ function createPopupContent(ship) {
     const timestamp = ship[5];
     const source = ship[6];
 
-    const flagEmoji = flag ? getFlagEmoji(flag) : "N/A";
+    const flagEmoji = flag ? getFlagEmoji(flag) : "-";
     const latDMS = toDMS(ship[4], 'lat');
     const lonDMS = toDMS(ship[3], 'lon');
 
@@ -204,16 +204,16 @@ function createPopupContent(ship) {
         <center><b><i>${ship[8] || mmsi}</i></b><br><br></center>
         MMSI: ${mmsi}<br>
         Tipe Kapal: ${shipType}<br>
-        IMO: ${imo || 'N/A'}<br>
+        IMO: ${imo || '-'}<br>
         Bendera: ${flagEmoji}<br>
-        Call Sign: ${callSign || 'N/A'}<br>
-        Kecepatan: ${speed || 'N/A'} knots<br>
-        Status: ${navStatus || 'N/A'}<br>
-        Tujuan: ${destination || 'N/A'}<br>
-        GT: ${gt || 'N/A'}<br>
+        Call Sign: ${callSign || '-'}<br>
+        Kecepatan: ${speed || '-'} knots<br>
+        Status: ${navStatus || '-'}<br>
+        Tujuan: ${destination || '-'}<br>
+        GT: ${gt || '-'}<br>
         Koordinat: ${latDMS}, ${lonDMS}<br>
         Data Terakhir: ${new Date(timestamp * 1000).toLocaleString()}<br>
-        Sumber: ${source || 'N/A'} (${timeAgo(timestamp)})<br>
+        Sumber: ${source || '-'} (${timeAgo(timestamp)})<br>
     `;
 }
 
@@ -278,7 +278,7 @@ function searchShip() {
         filteredShips.forEach(ship => {
             const name = ship[8] || ship[0]; // Nama kapal atau MMSI
             const mmsi = ship[0]; // MMSI
-            const callSign = ship[9] || 'N/A'; // Call sign atau "N/A" jika tidak ada
+            const callSign = ship[9] || '-'; // Call sign atau "N/A" jika tidak ada
 
             const suggestionItem = document.createElement('li');
             suggestionItem.style.padding = '5px';
