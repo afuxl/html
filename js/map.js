@@ -32,10 +32,9 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
-let headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
+var headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
-let liveDataStatus = 'on'; // Default ke "on"
 
 // Fungsi untuk membuat ikon kapal yang berputar berdasarkan tipe kapal
 function createRotatingIcon(course, shipType) {
@@ -43,8 +42,68 @@ function createRotatingIcon(course, shipType) {
 
     // Tentukan warna berdasarkan tipe kapal
     switch (shipType.toLowerCase()) {
-        // Set color for different ship types
-        // ...
+        case 'passenger':
+            color = '#8A2BE2'; // Ungu
+            break;
+        case 'container':
+            color = '#87CEEB'; // Biru muda
+            break;
+        case 'fishing':
+            color = '#FFA07A'; // Orange
+            break;
+        case 'tug/towing':
+            color = '#3CB371'; // Hijau tua
+            break;
+        case 'offshore':
+            color = '#FF00FF'; // Magenta
+            break;
+        case 'platform':
+            color = '#FF00FF'; // Magenta (Sama seperti offshore)
+            break;
+        case 'non-merchant':
+            color = '#F0FFFF'; // Putih
+            break;
+        case 'sar':
+            color = '#FF8C00'; // Orange gelap
+            break;
+        case 'others':
+            color = '#D3D3D3'; // Abu-abu muda
+            break;
+        case 'non-ship':
+            color = '#D3D3D3'; // Abu-abu (Sama dengan Others)
+            break;
+        case 'unmatched':
+            color = '#000000'; // Hitam
+            break;
+        case 'kn':
+            color = '#A9A9A9'; // Abu-abu
+            break;
+        case 'kn sar':
+            color = '#FF0000'; // Merah
+            break;
+        case 'kn kplp':
+            color = '#0000FF'; // Biru
+            break;
+        case 'kn kenavigasian':
+            color = '#FFD700'; // Emas
+            break;
+        case 'kri':
+            color = '#00AA16'; // Hijau
+            break;
+
+        // Tambahan tipe kapal baru
+        case 'tanker':
+            color = '#FF4500'; // Oranye kemerahan
+            break;
+        case 'bulkcarrier':
+            color = '#8B4513'; // Cokelat (Seperti Bulkcarrier)
+            break;
+        case 'dry cargo':
+            color = '#4682B4'; // Biru baja (Steel Blue)
+            break;
+
+        default:
+            color = '#00AA16'; // Hitam sebagai default
     }
 
     // Buat ikon dengan warna yang ditentukan
@@ -63,6 +122,84 @@ function createRotatingIcon(course, shipType) {
     });
 }
 
+function timeAgo(timestamp) {
+    const now = new Date();
+    const timeDifference = now - new Date(timestamp * 1000);
+
+    const seconds = Math.floor(timeDifference / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) {
+        return days + " hari lalu";
+    } else if (hours > 0) {
+        return hours + " jam lalu";
+    } else if (minutes > 0) {
+        return minutes + " menit lalu";
+    } else {
+        return seconds + " detik lalu";
+    }
+}
+
+function getFlagEmoji(countryCode) {
+    const codePoints = countryCode.toUpperCase().split('')
+        .map(c => 0x1F1E6 - 65 + c.charCodeAt());
+    return String.fromCodePoint(...codePoints);
+}
+
+function toDMS(deg, type) {
+    const d = Math.floor(Math.abs(deg));
+    const m = Math.floor((Math.abs(deg) - d) * 60);
+    const s = ((Math.abs(deg) - d - m / 60) * 3600).toFixed(2);
+    let direction;
+
+    if (type === 'lat') {
+        direction = deg >= 0 ? 'LU' : 'LS';
+    } else {
+        direction = deg >= 0 ? 'BT' : 'BB';
+    }
+
+    return `${d}°${m}'${s}" ${direction}`;
+}
+
+function updateLastUpdateTimestamp(apiTimestamp) {
+    const timestamp = new Date(apiTimestamp * 1000).toLocaleString();
+    document.getElementById('last-update').innerText = `Last update: ${timestamp}`;
+}
+
+function countVisibleShips() {
+    var visibleMarkers = 0;
+    markers.eachLayer(function (marker) {
+        // Hanya hitung marker yang terlihat (tidak dalam bentuk cluster)
+        if (map.getBounds().contains(marker.getLatLng())) {
+            visibleMarkers++;
+        }
+    });
+    // Update teks jumlah kapal yang terlihat
+    document.getElementById('ship-count').innerText = `TOTAL VISIBLE SHIPS: ${visibleMarkers}`;
+}
+
+// Event listener untuk memperbarui jumlah kapal terlihat saat peta digerakkan atau di-zoom
+map.on('moveend', countVisibleShips);
+map.on('zoomend', countVisibleShips);
+
+// Fungsi untuk mengambil data API dan memperbarui peta
+var isFirstLoad = true; // Variabel untuk melacak apakah ini pertama kali data diambil
+
+// Fungsi untuk menampilkan loading screen
+function showLoadingScreen() {
+    document.getElementById('loading-screen').style.display = 'flex'; // Tampilkan loading screen
+}
+
+// Fungsi untuk menyembunyikan loading screen
+function hideLoadingScreen() {
+    document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
+}
+
+// Variabel untuk menyimpan status live data
+let liveDataStatus = 'on'; // Default ke "on"
+
 // Fungsi untuk toggle live data (tanpa memanggil ulang data)
 function toggleLiveData() {
     liveDataStatus = document.getElementById('live-data-toggle').value;
@@ -72,7 +209,6 @@ function toggleLiveData() {
 // Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
 function filterShipMarkers() {
     markers.clearLayers(); // Kosongkan semua marker yang ada
-    removeHeadingLines(); // Pastikan heading line dihapus
 
     // Lakukan filter berdasarkan status live data
     Object.values(shipData).forEach(ship => {
@@ -100,12 +236,23 @@ function fetchDataAndUpdateMap() {
             var currentMap = data.currentMap;
             var apiTimestamp = data.timestamp;
 
-            // Simpan data kapal ke variabel global (shipData)
+            // Simpan data kapal
             shipData = currentMap; // Simpan data kapal ke variabel global
 
             updateLastUpdateTimestamp(apiTimestamp);
-            filterShipMarkers(); // Lakukan filter kapal setelah data diterima
 
+            markers.clearLayers(); // Kosongkan marker yang ada
+            removeHeadingLines(); // Hapus garis heading sebelumnya
+
+            for (var key in currentMap) {
+                if (currentMap.hasOwnProperty(key)) {
+                    var ship = currentMap[key];
+                    addShipMarker(ship); // Tambahkan marker untuk kapal
+                }
+            }
+
+            map.addLayer(markers); // Tambahkan marker ke peta
+            countVisibleShips(); // Hitung jumlah kapal yang terlihat
         })
         .catch(error => console.error('Error fetching data:', error))
         .finally(() => {
@@ -130,52 +277,51 @@ function addShipMarker(ship) {
 
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
         marker.bindPopup(createPopupContent(ship));
+        marker.shipData = ship; // Simpan data kapal ke dalam marker
         markers.addLayer(marker);
 
-        // Simpan data kapal untuk marker ini
-        marker.shipData = ship;
-
         // Periksa level zoom sebelum menambahkan heading line
-        const zoomLevel = map.getZoom();
-        if (zoomLevel >= 12 && heading !== null && heading !== undefined) { 
-            const headingLine = createHeadingLine(latitude, longitude, heading);
-            headingLines[mmsi] = headingLine;
-            map.addLayer(headingLine); // Tambahkan garis heading ke peta
+        if (heading !== null && heading !== undefined) {
+            const zoomLevel = map.getZoom();
+            if (zoomLevel >= 12) { // Tampilkan heading line hanya jika zoom level 12 atau lebih
+                const headingLine = createHeadingLine(latitude, longitude, heading);
+                map.addLayer(headingLine); // Tambahkan garis heading ke peta
+                headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
+            }
         }
     }
 }
 
 // Fungsi untuk membuat garis heading kapal
-function createHeadingLine(lat, lon, heading) {
-    const radian = (heading - 90) * Math.PI / 180;
-    const distance = 0.1; // Panjang garis heading dalam satuan derajat (kira-kira 11 km)
-    const endLat = lat + distance * Math.cos(radian);
-    const endLon = lon + distance * Math.sin(radian);
-
-    return L.polyline([[lat, lon], [endLat, endLon]], { color: 'red', weight: 2 });
+function createHeadingLine(latitude, longitude, heading) {
+    const length = 0.03; // Panjang garis heading dalam derajat
+    const radian = (heading * Math.PI) / 180;
+    const lat2 = latitude + length * Math.cos(radian);
+    const lon2 = longitude + length * Math.sin(radian);
+    return L.polyline([[latitude, longitude], [lat2, lon2]], { color: 'red', weight: 2 });
 }
 
-// Fungsi untuk menghapus semua heading line
+// Fungsi untuk menghapus semua heading lines dari peta
 function removeHeadingLines() {
-    for (let mmsi in headingLines) {
+    for (const mmsi in headingLines) {
         if (headingLines.hasOwnProperty(mmsi)) {
             map.removeLayer(headingLines[mmsi]);
         }
     }
-    headingLines = {}; // Reset headingLines
+    headingLines = {}; // Kosongkan objek headingLines
 }
 
-function checkHeadingLines() {
+// Event listener untuk memperbarui tampilan heading line saat zoom berubah
+map.on('zoomend', function() {
     const zoomLevel = map.getZoom();
 
-    // Hapus semua heading line jika zoom level kurang dari 12
-    if (zoomLevel < 12) {
-        removeHeadingLines();
-    } else {
-        // Tambahkan kembali heading line jika zoom level 12 atau lebih
-        markers.eachLayer(marker => {
-            const ship = marker.shipData; // Ambil data kapal yang terkait dengan marker
+    // Hapus semua heading line terlebih dahulu
+    removeHeadingLines();
 
+    // Tambahkan heading line jika zoom level cukup tinggi
+    if (zoomLevel >= 16) {
+        markers.eachLayer(function(marker) {
+            const ship = marker.shipData;
             if (ship) {
                 const heading = ship[2];
                 const latitude = ship[4];
@@ -183,14 +329,13 @@ function checkHeadingLines() {
 
                 if (heading !== null && heading !== undefined) {
                     const headingLine = createHeadingLine(latitude, longitude, heading);
-                    headingLines[ship[0]] = headingLine;
                     map.addLayer(headingLine);
+                    headingLines[ship[0]] = headingLine; // Simpan heading line
                 }
             }
         });
     }
-}
-map.on('zoomend', checkHeadingLines);
+});
 
 // Fungsi untuk membuat konten popup kapal
 function createPopupContent(ship) {
@@ -286,6 +431,36 @@ function searchShip() {
     }
 }
 
+function toggleLiveData() {
+    const liveDataStatus = document.getElementById('live-data').value;
+    updateMapWithFilteredData(liveDataStatus);
+}
+
+function updateMapWithFilteredData(liveDataStatus) {
+    markers.clearLayers(); // Clear the current markers on the map
+    removeHeadingLines(); // Clear heading lines
+
+    for (let key in shipData) {
+        if (shipData.hasOwnProperty(key)) {
+            let ship = shipData[key];
+            let shipStatus = ship[19]; // Assuming ship[19] contains 'good' or 'bad' status
+            
+            // Filter based on live data toggle (ON for good only, OFF for both good and bad)
+            if (liveDataStatus === 'on' && shipStatus === 'good') {
+                addShipMarker(ship); // Only add 'good' ships when ON
+            } else if (liveDataStatus === 'off') {
+                addShipMarker(ship); // Add all ships when OFF
+            }
+        }
+    }
+
+    // Add the updated markers back to the map
+    map.addLayer(markers);
+    countVisibleShips(); // Update the visible ship count
+}
+
+// Call toggleLiveData to initialize filtering on page load
+toggleLiveData();
 // Fungsi untuk fokus pada kapal dan menampilkan popup
 function focusOnShip(ship) {
     const latitude = ship[4];
