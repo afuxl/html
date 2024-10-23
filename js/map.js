@@ -368,6 +368,76 @@ function searchShip() {
         notFoundMessage.style.display = 'block'; // Tampilkan pesan jika tidak ada kapal
     }
 }
+// Fungsi untuk menambahkan marker kapal dan heading line
+function addShipMarker(ship) {
+    const mmsi = ship[0];
+    const name = ship[8] || mmsi;
+    const latitude = ship[4];
+    const longitude = ship[3];
+    const course = ship[17] || 0;
+    const heading = ship[2]; // Arah heading kapal
+
+    if (latitude && longitude) {
+        const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
+
+        marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
+        marker.bindPopup(createPopupContent(ship));
+        markers.addLayer(marker);
+
+        // Tambahkan garis heading berdasarkan arah kapal (heading)
+        if (heading !== null && heading !== undefined) {
+            const headingLine = createHeadingLine(latitude, longitude, heading);
+            map.addLayer(headingLine); // Tambahkan garis heading ke peta
+        }
+    }
+}
+
+// Fungsi untuk membuat garis heading
+function createHeadingLine(lat, lng, heading) {
+    const distance = 1; // Panjang garis heading dalam kilometer (sesuaikan dengan kebutuhan)
+
+    // Menghitung koordinat akhir berdasarkan heading dan jarak
+    const destination = computeDestinationPoint(lat, lng, distance, heading);
+
+    // Membuat polyline dari posisi kapal ke titik tujuan (heading)
+    const headingLine = L.polyline([[lat, lng], destination], {
+        color: 'red', // Warna garis heading
+        weight: 2,    // Ketebalan garis heading
+        opacity: 0.8, // Transparansi garis
+        dashArray: '5, 5' // Garis putus-putus
+    });
+
+    return headingLine;
+}
+
+// Fungsi untuk menghitung titik tujuan berdasarkan jarak dan heading (menggunakan rumus geodesi)
+function computeDestinationPoint(lat, lng, distance, heading) {
+    const radiusEarthKm = 6371; // Radius Bumi dalam kilometer
+
+    // Konversi heading ke radian
+    const headingRad = heading * (Math.PI / 180);
+
+    // Konversi latitude dan longitude ke radian
+    const latRad = lat * (Math.PI / 180);
+    const lngRad = lng * (Math.PI / 180);
+
+    // Menghitung latitude dan longitude tujuan menggunakan rumus geodesi
+    const newLatRad = Math.asin(
+        Math.sin(latRad) * Math.cos(distance / radiusEarthKm) +
+        Math.cos(latRad) * Math.sin(distance / radiusEarthKm) * Math.cos(headingRad)
+    );
+
+    const newLngRad = lngRad + Math.atan2(
+        Math.sin(headingRad) * Math.sin(distance / radiusEarthKm) * Math.cos(latRad),
+        Math.cos(distance / radiusEarthKm) - Math.sin(latRad) * Math.sin(newLatRad)
+    );
+
+    // Konversi kembali ke derajat
+    const newLat = newLatRad * (180 / Math.PI);
+    const newLng = newLngRad * (180 / Math.PI);
+
+    return [newLat, newLng];
+}
 
 
 // Fungsi untuk fokus pada kapal dan menampilkan popup
