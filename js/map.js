@@ -226,7 +226,7 @@ function filterShipMarkers() {
     map.addLayer(markers); // Tambahkan marker hasil filter ke peta
     countVisibleShips(); // Perbarui jumlah kapal yang terlihat
 }
-
+document.getElementById('live-data').addEventListener('change', toggleLiveData);
 // Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
     if (isFirstLoad) {
@@ -243,7 +243,6 @@ function fetchDataAndUpdateMap() {
             shipData = currentMap; // Simpan data kapal ke variabel global
 
             updateLastUpdateTimestamp(apiTimestamp);
-            filterShipMarkers(); // Filter data setelah diperbarui
             markers.clearLayers(); // Kosongkan marker yang ada
             removeHeadingLines(); // Hapus garis heading sebelumnya
 
@@ -253,7 +252,7 @@ function fetchDataAndUpdateMap() {
                     addShipMarker(ship); // Tambahkan marker untuk kapal
                 }
             }
-
+            filterShipMarkers(); // Filter data setelah diperbarui
             map.addLayer(markers); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
         })
@@ -505,4 +504,3 @@ function focusOnShip(ship) {
 
 // Event listeners
 document.getElementById('ship-search').addEventListener('input', searchShip);
-document.getElementById('live-data').addEventListener('change', toggleLiveData);
