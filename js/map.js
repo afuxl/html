@@ -346,8 +346,13 @@ function createPopupContent(ship) {
 }
 
 // Fungsi untuk mengatur interval auto-update
+// Variabel untuk menyimpan interval auto-update
+let autoUpdateInterval;
+let isFirstLoad = true; // Tandai pemuatan pertama kali halaman
+
+// Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
-    const updateInterval = document.getElementById('update-interval').value;
+    const updateInterval = parseInt(document.getElementById('update-interval').value);
 
     // Hentikan interval sebelumnya jika ada
     if (autoUpdateInterval) {
@@ -359,19 +364,28 @@ function setUpdateInterval() {
 
     // Jika interval lebih dari 0, set interval baru
     if (updateInterval > 0) {
-        autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-        fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
+        // Jika ini bukan pemuatan pertama, baru set interval tanpa panggil fetchDataAndUpdateMap
+        if (!isFirstLoad) {
+            autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
+        } else {
+            // Pada pemuatan pertama kali, langsung panggil fetchDataAndUpdateMap
+            fetchDataAndUpdateMap().then(() => {
+                // Setelah pemuatan pertama selesai, set interval untuk berikutnya
+                autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
+            });
+        }
     }
 }
 
+// Fungsi yang akan dipanggil saat halaman pertama kali dimuat
 window.onload = function() {
     const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
     document.getElementById('update-interval').value = savedInterval; // Set nilai input
     setUpdateInterval(); // Atur interval
 
-    // Ambil data kapal saat halaman dimuat
-    // fetchDataAndUpdateMap();
+    isFirstLoad = false; // Tandai bahwa pemuatan pertama telah selesai
 };
+
 
 // Pencarian kapal
 function searchShip() {
