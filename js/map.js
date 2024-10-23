@@ -225,6 +225,16 @@ function fetchDataAndUpdateMap() {
 
             map.addLayer(markers); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
+
+            // Jika zoom maksimal, tambahkan heading line
+            if (map.getZoom() === 19) {
+                Object.values(currentMap).forEach(ship => {
+                    const headingLine = createHeadingLine(ship);
+                    if (headingLine) {
+                        headingLine.addTo(map);
+                    }
+                });
+            }
         })
         .catch(error => console.error('Error fetching data:', error))
         .finally(() => {
@@ -234,6 +244,7 @@ function fetchDataAndUpdateMap() {
             }
         });
 }
+
 
 // Fungsi untuk menambahkan marker kapal
 function addShipMarker(ship) {
@@ -369,75 +380,72 @@ function searchShip() {
     }
 }
 // Fungsi untuk menambahkan marker kapal dan heading line
+// Fungsi untuk menambahkan marker kapal
 function addShipMarker(ship) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
     const latitude = ship[4];
     const longitude = ship[3];
     const course = ship[17] || 0;
-    const heading = ship[2]; // Arah heading kapal
 
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
-        marker.bindPopup(createPopupContent(ship));
+        marker.bindPopup(createPopupContent(ship)); // Gunakan fungsi popup yang sama
         markers.addLayer(marker);
 
-        // Tambahkan garis heading berdasarkan arah kapal (heading)
-        if (heading !== null && heading !== undefined) {
-            const headingLine = createHeadingLine(latitude, longitude, heading);
-            map.addLayer(headingLine); // Tambahkan garis heading ke peta
+        // Tambahkan heading line hanya jika zoom maksimal
+        if (map.getZoom() === 19) {
+            const headingLine = createHeadingLine(ship);
+            if (headingLine) {
+                headingLine.addTo(map);
+            }
         }
     }
 }
 
+
 // Fungsi untuk membuat garis heading
-function createHeadingLine(lat, lng, heading) {
-    const distance = 1; // Panjang garis heading dalam kilometer (sesuaikan dengan kebutuhan)
+// Fungsi untuk membuat garis heading dari posisi kapal
+function createHeadingLine(ship) {
+    const latitude = ship[4];
+    const longitude = ship[3];
+    const heading = ship[2]; // Ambil data heading
 
-    // Menghitung koordinat akhir berdasarkan heading dan jarak
-    const destination = computeDestinationPoint(lat, lng, distance, heading);
+    if (heading === null || heading === undefined || latitude === undefined || longitude === undefined) {
+        return null; // Jika data tidak lengkap, tidak membuat garis
+    }
 
-    // Membuat polyline dari posisi kapal ke titik tujuan (heading)
-    const headingLine = L.polyline([[lat, lng], destination], {
-        color: 'red', // Warna garis heading
-        weight: 2,    // Ketebalan garis heading
+    const headingLength = 0.5; // Panjang garis dalam km (500 meter)
+    const endPoint = calculateDestinationPoint(latitude, longitude, heading, headingLength);
+
+    // Buat polyline dari posisi kapal ke arah heading
+    return L.polyline([[latitude, longitude], endPoint], {
+        color: 'red', // Warna garis
+        weight: 2, // Ketebalan garis
         opacity: 0.8, // Transparansi garis
-        dashArray: '5, 5' // Garis putus-putus
     });
-
-    return headingLine;
 }
 
-// Fungsi untuk menghitung titik tujuan berdasarkan jarak dan heading (menggunakan rumus geodesi)
-function computeDestinationPoint(lat, lng, distance, heading) {
-    const radiusEarthKm = 6371; // Radius Bumi dalam kilometer
+// Fungsi untuk menghitung titik tujuan berdasarkan heading dan jarak
+function calculateDestinationPoint(lat, lon, heading, distanceKm) {
+    const R = 6371; // Radius bumi dalam kilometer
+    const rad = Math.PI / 180;
+    const bearing = heading * rad; // Konversi heading ke radian
 
-    // Konversi heading ke radian
-    const headingRad = heading * (Math.PI / 180);
+    const lat1 = lat * rad;
+    const lon1 = lon * rad;
 
-    // Konversi latitude dan longitude ke radian
-    const latRad = lat * (Math.PI / 180);
-    const lngRad = lng * (Math.PI / 180);
+    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distanceKm / R) +
+        Math.cos(lat1) * Math.sin(distanceKm / R) * Math.cos(bearing));
 
-    // Menghitung latitude dan longitude tujuan menggunakan rumus geodesi
-    const newLatRad = Math.asin(
-        Math.sin(latRad) * Math.cos(distance / radiusEarthKm) +
-        Math.cos(latRad) * Math.sin(distance / radiusEarthKm) * Math.cos(headingRad)
-    );
+    const lon2 = lon1 + Math.atan2(Math.sin(bearing) * Math.sin(distanceKm / R) * Math.cos(lat1),
+        Math.cos(distanceKm / R) - Math.sin(lat1) * Math.sin(lat2));
 
-    const newLngRad = lngRad + Math.atan2(
-        Math.sin(headingRad) * Math.sin(distance / radiusEarthKm) * Math.cos(latRad),
-        Math.cos(distance / radiusEarthKm) - Math.sin(latRad) * Math.sin(newLatRad)
-    );
-
-    // Konversi kembali ke derajat
-    const newLat = newLatRad * (180 / Math.PI);
-    const newLng = newLngRad * (180 / Math.PI);
-
-    return [newLat, newLng];
+    return [lat2 / rad, lon2 / rad]; // Kembalikan sebagai [latitude, longitude]
 }
+
 
 
 // Fungsi untuk fokus pada kapal dan menampilkan popup
