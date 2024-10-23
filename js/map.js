@@ -36,10 +36,80 @@ var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
 
 // Fungsi untuk membuat ikon kapal yang berputar
-function createRotatingIcon(course) {
+// Fungsi untuk membuat ikon kapal yang berputar berdasarkan tipe kapal
+function createRotatingIcon(course, shipType) {
+    let color = '#00AA16'; // Warna default jika tidak ada kecocokan
+
+    // Tentukan warna berdasarkan tipe kapal
+    switch (shipType.toLowerCase()) {
+        case 'passenger':
+            color = '#8A2BE2'; // Ungu
+            break;
+        case 'container':
+            color = '#87CEEB'; // Biru muda
+            break;
+        case 'fishing':
+            color = '#FFA07A'; // Orange
+            break;
+        case 'tug/towing':
+            color = '#3CB371'; // Hijau tua
+            break;
+        case 'offshore':
+            color = '#FF00FF'; // Magenta
+            break;
+        case 'platform':
+            color = '#FF00FF'; // Magenta (Sama seperti offshore dalam gambar)
+            break;
+        case 'non-merchant':
+            color = '#F0FFFF'; // Putih
+            break;
+        case 'sar':
+            color = '#FF8C00'; // Orange gelap
+            break;
+        case 'others':
+            color = '#D3D3D3'; // Abu-abu muda
+            break;
+        case 'non-ship':
+            color = '#D3D3D3'; // Abu-abu (Sama dengan Others)
+            break;
+        case 'unmatched':
+            color = '#000000'; // Hitam
+            break;
+        case 'kn':
+            color = '#A9A9A9'; // Abu-abu
+            break;
+        case 'kn sar':
+            color = '#FF0000'; // Merah
+            break;
+        case 'kn kplp':
+            color = '#0000FF'; // Biru
+            break;
+        case 'kn kenavigasian':
+            color = '#FFD700'; // Emas
+            break;
+        case 'kri':
+            color = '#00AA16'; // Hijau
+            break;
+
+        // Tambahan tipe kapal baru
+        case 'tanker':
+            color = '#FF4500'; // Oranye kemerahan
+            break;
+        case 'bulkcarrier':
+            color = '#8B4513'; // Cokelat (Seperti Bulkcarrier)
+            break;
+        case 'dry cargo':
+            color = '#4682B4'; // Biru baja (Steel Blue)
+            break;
+
+        default:
+            color = '#00AA16'; // Hitam sebagai default
+    }
+
+    // Buat ikon dengan warna yang ditentukan
     return L.divIcon({
         html: `<div style="transform: rotate(${course}deg); width: 30px; height: 30px;">
-                <svg fill="#00AA16" height="30px" width="30px" version="1.1" 
+                <svg fill="${color}" height="30px" width="30px" version="1.1" 
                     xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
                     viewBox="0 0 1792 1792" xml:space="preserve">
                     <path d="M187.8,1659L896,132.9L1604.2,1659L896,1285.5L187.8,1659z"/>
@@ -174,7 +244,7 @@ function addShipMarker(ship) {
     const course = ship[17] || 0;
 
     if (latitude && longitude) {
-        const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course) });
+        const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
         marker.bindPopup(createPopupContent(ship)); // Gunakan fungsi popup yang sama
