@@ -292,7 +292,7 @@ map.on('zoomend', function() {
     removeHeadingLines();
 
     // Tambahkan heading line jika zoom level cukup tinggi
-    if (zoomLevel >= 12) {
+    if (zoomLevel >= 16) {
         markers.eachLayer(function(marker) {
             const ship = marker.shipData;
             if (ship) {
@@ -312,29 +312,36 @@ map.on('zoomend', function() {
 
 // Fungsi untuk membuat konten popup kapal
 function createPopupContent(ship) {
-    const name = ship[8] || 'Unknown';
-    const countryFlag = getFlagEmoji(ship[12]) || '';
-    const country = ship[12] || 'Unknown';
-    const shipType = ship[10] || 'Unknown';
-    const mmsi = ship[0] || 'Unknown';
-    const latitude = toDMS(ship[4], 'lat') || 'Unknown';
-    const longitude = toDMS(ship[3], 'lng') || 'Unknown';
-    const speed = (ship[5] || 'Unknown') + ' knots';
-    const lastUpdated = timeAgo(ship[6]) || 'Unknown';
-    const course = (ship[17] || 'Unknown') + '°';
+    const mmsi = ship[0];
+    const shipType = ship[1];
+    const callSign = ship[9];
+    const imo = ship[11];
+    const flag = ship[14];
+    const speed = ship[7];
+    const navStatus = ship[15];
+    const destination = ship[18];
+    const gt = ship[13];
+    const timestamp = ship[5];
+    const source = ship[6];
+
+    const flagEmoji = flag ? getFlagEmoji(flag) : "N/A";
+    const latDMS = toDMS(ship[4], 'lat');
+    const lonDMS = toDMS(ship[3], 'lon');
 
     return `
-        <div>
-            <strong>${name}</strong><br/>
-            <strong>Country:</strong> ${countryFlag} ${country}<br/>
-            <strong>Type:</strong> ${shipType}<br/>
-            <strong>MMSI:</strong> ${mmsi}<br/>
-            <strong>Latitude:</strong> ${latitude}<br/>
-            <strong>Longitude:</strong> ${longitude}<br/>
-            <strong>Speed:</strong> ${speed}<br/>
-            <strong>Course:</strong> ${course}<br/>
-            <strong>Last updated:</strong> ${lastUpdated}
-        </div>
+        <center><b><i>${ship[8] || mmsi}</i></b><br><br></center>
+        MMSI: ${mmsi}<br>
+        Tipe Kapal: ${shipType}<br>
+        IMO: ${imo || '-'}<br>
+        Bendera: ${flagEmoji}<br>
+        Call Sign: ${callSign || '-'}<br>
+        Kecepatan: ${speed || '-'} knots<br>
+        Status: ${navStatus || '-'}<br>
+        Tujuan: ${destination || '-'}<br>
+        GT: ${gt || '-'}<br>
+        Koordinat: ${latDMS}, ${lonDMS}<br>
+        Data Terakhir: ${new Date(timestamp * 1000).toLocaleString()}<br>
+        Sumber: ${source || '-'} (${timeAgo(timestamp)})<br>
     `;
 }
 
