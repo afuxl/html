@@ -313,7 +313,7 @@ map.on('zoomend', function() {
 // Fungsi untuk membuat konten popup kapal
 function createPopupContent(ship) {
     const mmsi = ship[0];
-    const shipType = ship[1];
+    const shipType = ship[10];
     const callSign = ship[9];
     const imo = ship[11];
     const flag = ship[14];
@@ -350,3 +350,75 @@ autoUpdateInterval = setInterval(fetchDataAndUpdateMap, 60000);
 
 // Panggil fetchDataAndUpdateMap pertama kali
 fetchDataAndUpdateMap();
+
+unction searchShip() {
+    const searchValue = document.getElementById('ship-search').value.toLowerCase();
+    const suggestionBox = document.getElementById('ship-suggestions');
+    const notFoundMessage = document.getElementById('not-found-message');
+
+    suggestionBox.innerHTML = ''; // Kosongkan saran sebelumnya
+    suggestionBox.style.display = 'none'; // Sembunyikan saran jika tidak ada yang cocok
+    notFoundMessage.style.display = 'none'; // Sembunyikan pesan "No ships found"
+
+    if (searchValue === '') {
+        return;
+    }
+
+    // Filter kapal berdasarkan nama, MMSI, atau call sign
+    const filteredShips = Object.values(shipData).filter(ship => {
+        const name = ship[8] || ''; // Nama kapal
+        const mmsi = ship[0] || ''; // MMSI kapal
+        const callSign = ship[9] || ''; // Call sign kapal
+
+        // Cek apakah searchValue cocok dengan salah satu dari tiga data
+        return name.toLowerCase().includes(searchValue) || 
+               mmsi.toLowerCase().includes(searchValue) || 
+               callSign.toLowerCase().includes(searchValue);
+    });
+
+    if (filteredShips.length > 0) {
+        suggestionBox.style.display = 'block'; // Tampilkan daftar saran
+
+        filteredShips.forEach(ship => {
+            const name = ship[8] || ship[0]; // Nama kapal atau MMSI
+            const mmsi = ship[0]; // MMSI
+            const callSign = ship[9] || 'N/A'; // Call sign atau "N/A" jika tidak ada
+
+            const suggestionItem = document.createElement('li');
+            suggestionItem.style.padding = '5px';
+            suggestionItem.style.cursor = 'pointer';
+            suggestionItem.textContent = `${name} (MMSI: ${mmsi}, Call Sign: ${callSign})`;
+
+            // Ketika saran diklik, fokuskan peta pada kapal tersebut
+            suggestionItem.onclick = function() {
+                document.getElementById('ship-search').value = name;
+                suggestionBox.style.display = 'none'; // Sembunyikan saran setelah memilih
+                focusOnShip(ship); // Fokus pada kapal yang dipilih
+            };
+
+            suggestionBox.appendChild(suggestionItem); // Tambahkan saran ke daftar
+        });
+    } else {
+        notFoundMessage.style.display = 'block'; // Tampilkan pesan jika tidak ada kapal
+    }
+}
+
+
+// Fungsi untuk fokus pada kapal dan menampilkan popup
+function focusOnShip(ship) {
+    const latitude = ship[4];
+    const longitude = ship[3];
+
+    // Fokus pada posisi kapal
+    map.setView([latitude, longitude], 16); // Atur zoom level sesuai kebutuhan
+
+    // Temukan marker yang sesuai dan buka popup-nya
+    markers.eachLayer(marker => {
+        if (marker.getLatLng().lat === latitude && marker.getLatLng().lng === longitude) {
+            marker.openPopup(); // Buka popup untuk marker kapal
+        }
+    });
+}
+
+// Event listeners
+document.getElementById('ship-search').addEventListener('input', searchShip);
