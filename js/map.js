@@ -346,7 +346,7 @@ function createPopupContent(ship) {
 }
 
 // Variabel untuk menyimpan interval auto-update
-let autoUpdateInterval;
+var autoUpdateInterval;
 
 // Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
