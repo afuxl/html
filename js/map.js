@@ -345,8 +345,12 @@ function createPopupContent(ship) {
     `;
 }
 
+// Variabel untuk menyimpan interval auto-update
+let autoUpdateInterval;
+
+// Fungsi untuk mengatur interval auto-update
 function setUpdateInterval() {
-    const updateInterval = document.getElementById('update-interval').value;
+    const updateInterval = parseInt(document.getElementById('update-interval').value);
 
     // Hentikan interval sebelumnya jika ada
     if (autoUpdateInterval) {
@@ -356,10 +360,9 @@ function setUpdateInterval() {
     // Simpan pengaturan ke localStorage
     localStorage.setItem('autoUpdateInterval', updateInterval);
 
-    // Jika interval lebih dari 0, set interval baru
+    // Jika interval lebih dari 0, set interval baru, tapi JANGAN panggil fetchDataAndUpdateMap langsung
     if (updateInterval > 0) {
         autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
-        fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
     }
 }
 
@@ -367,11 +370,12 @@ function setUpdateInterval() {
 window.onload = function() {
     const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
     document.getElementById('update-interval').value = savedInterval; // Set nilai input
-    setUpdateInterval(); // Atur interval
+    setUpdateInterval(); // Atur interval auto-update
 
-    // Ambil data kapal saat halaman dimuat
+    // Ambil data kapal hanya sekali saat halaman dimuat
     fetchDataAndUpdateMap();
 };
+
 
 
 
