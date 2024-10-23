@@ -448,7 +448,7 @@ function updateMapWithFilteredData(liveDataStatus) {
             // Filter based on live data toggle (ON for good only, OFF for both good and bad)
             if (liveDataStatus === 'on' && shipStatus === 'good') {
                 addShipMarker(ship); // Only add 'good' ships when ON
-            } else if (liveDataStatus === 'off') {
+            } else if (liveDataStatus === 'bad') {
                 addShipMarker(ship); // Add all ships when OFF
             }
         }
