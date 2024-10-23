@@ -372,11 +372,24 @@ function createPopupContent(ship) {
     `;
 }
 
-// Otomatis perbarui data setiap 60 detik
-autoUpdateInterval = setInterval(fetchDataAndUpdateMap, 60000);
+// Fungsi untuk mengatur interval auto-update
+function setUpdateInterval() {
+    const updateInterval = document.getElementById('update-interval').value;
 
-// Panggil fetchDataAndUpdateMap pertama kali
-fetchDataAndUpdateMap();
+    // Hentikan interval sebelumnya jika ada
+    if (autoUpdateInterval) {
+        clearInterval(autoUpdateInterval);
+    }
+
+    // Simpan pengaturan ke localStorage
+    localStorage.setItem('autoUpdateInterval', updateInterval);
+
+    // Jika interval lebih dari 0, set interval baru
+    if (updateInterval > 0) {
+        autoUpdateInterval = setInterval(fetchDataAndUpdateMap, updateInterval);
+        fetchDataAndUpdateMap(); // Panggil sekali untuk mengambil data segera
+    }
+}
 
 // Pencarian kapal
 function searchShip() {
