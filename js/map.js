@@ -391,6 +391,15 @@ function setUpdateInterval() {
     }
 }
 
+window.onload = function() {
+    const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
+    document.getElementById('update-interval').value = savedInterval; // Set nilai input
+    setUpdateInterval(); // Atur interval
+
+    // Ambil data kapal saat halaman dimuat
+    fetchDataAndUpdateMap();
+};
+
 // Pencarian kapal
 function searchShip() {
     const searchValue = document.getElementById('ship-search').value.toLowerCase();
