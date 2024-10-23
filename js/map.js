@@ -197,6 +197,33 @@ function hideLoadingScreen() {
     document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
 }
 
+// Variabel untuk menyimpan status live data
+let liveDataStatus = 'on'; // Default ke "on"
+
+// Fungsi untuk toggle live data (tanpa memanggil ulang data)
+function toggleLiveData() {
+    liveDataStatus = document.getElementById('live-data-toggle').value;
+    filterShipMarkers(); // Lakukan filter marker setelah mengubah status live data
+}
+
+// Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
+function filterShipMarkers() {
+    markers.clearLayers(); // Kosongkan semua marker yang ada
+
+    // Lakukan filter berdasarkan status live data
+    Object.values(shipData).forEach(ship => {
+        if (liveDataStatus === 'on' && ship[19] !== 'good') {
+            return; // Jika live data "on", hanya tampilkan kapal dengan status "good"
+        }
+
+        // Tambahkan marker kapal setelah filter
+        addShipMarker(ship);
+    });
+
+    map.addLayer(markers); // Tambahkan marker hasil filter ke peta
+    countVisibleShips(); // Perbarui jumlah kapal yang terlihat
+}
+
 // Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
     if (isFirstLoad) {
