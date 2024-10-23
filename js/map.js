@@ -370,7 +370,7 @@ window.onload = function() {
     setUpdateInterval(); // Atur interval
 
     // Ambil data kapal saat halaman dimuat
-    fetchDataAndUpdateMap();
+    // fetchDataAndUpdateMap();
 };
 
 // Pencarian kapal
