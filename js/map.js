@@ -425,6 +425,8 @@ function searchShip() {
     }
 }
 
+let liveDataStatus = 'off'; 
+
 function toggleLiveData() {
     const liveDataStatus = document.getElementById('live-data').value;
     updateMapWithFilteredData(liveDataStatus);
