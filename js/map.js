@@ -197,36 +197,6 @@ function hideLoadingScreen() {
     document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
 }
 
-// Variabel untuk menyimpan status live data
-let liveDataStatus = 'on'; 
-
-// Fungsi untuk toggle live data (ON: good ships only, OFF: all ships)
-function toggleLiveData() {
-    liveDataStatus = document.getElementById('live-data').value;
-    filterShipMarkers(); // Panggil fungsi filter marker kapal
-}
-
-// Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
-function filterShipMarkers() {
-    markers.clearLayers(); // Kosongkan semua marker yang ada
-    removeHeadingLines(); // Hapus semua heading lines
-    
-    // Lakukan filter berdasarkan status live data (on/off)
-    Object.values(shipData).forEach(ship => {
-        let shipStatus = ship[19]; // Asumsi ship[19] berisi 'good' atau 'bad'
-        
-        if (liveDataStatus === 'on' && shipStatus !== 'good') {
-            return; // Jika live data "on", hanya tampilkan kapal dengan status "good"
-        }
-
-        // Tambahkan marker kapal setelah filter
-        addShipMarker(ship);
-    });
-
-    map.addLayer(markers); // Tambahkan marker hasil filter ke peta
-    countVisibleShips(); // Perbarui jumlah kapal yang terlihat
-}
-document.getElementById('live-data').addEventListener('change', toggleLiveData);
 // Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
     if (isFirstLoad) {
@@ -483,6 +453,9 @@ function updateMapWithFilteredData(liveDataStatus) {
     countVisibleShips(); // Update the visible ship count
 }
 
+// Fungsi untuk memfilter dan menampilkan kapal berdasarkan status live data
+
+
 // Call toggleLiveData to initialize filtering on page load
 toggleLiveData();
 
@@ -504,3 +477,4 @@ function focusOnShip(ship) {
 
 // Event listeners
 document.getElementById('ship-search').addEventListener('input', searchShip);
+document.getElementById('live-data').addEventListener('change', toggleLiveData);
