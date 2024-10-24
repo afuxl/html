@@ -267,12 +267,19 @@ function addShipMarker(ship) {
 
 // Fungsi untuk membuat garis heading kapal
 function createHeadingLine(latitude, longitude, heading) {
-    const length = 0.03; // Panjang garis heading dalam derajat
+    const lengthMeters = 500; // Panjang garis heading dalam meter
+    const earthRadius = 6371000; // Radius bumi dalam meter
+    
+    // Konversi heading ke radian
     const radian = (heading * Math.PI) / 180;
-    const lat2 = latitude + length * Math.cos(radian);
-    const lon2 = longitude + length * Math.sin(radian);
+
+    // Hitung perubahan lintang (latitude) dan bujur (longitude)
+    const lat2 = latitude + (lengthMeters / earthRadius) * (180 / Math.PI) * Math.cos(radian);
+    const lon2 = longitude + (lengthMeters / earthRadius) * (180 / Math.PI) * Math.sin(radian) / Math.cos(latitude * Math.PI / 180);
+
     return L.polyline([[latitude, longitude], [lat2, lon2]], { color: 'red', weight: 2 });
 }
+
 
 // Fungsi untuk menghapus semua heading lines dari peta
 function removeHeadingLines() {
