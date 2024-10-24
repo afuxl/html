@@ -87,15 +87,15 @@
     <div id="loading-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 1000; justify-content: center; align-items: center;">
     <div>Memuat data, silahkan tunggu ... <br><center>© I-MOTION</center></div></div>
     <div id="map"></div>
-    <div id="last-update" onclick="fetchDataAndUpdateMap()">LAST UPDATE: N/A</div>
-    <div id="ship-count">TOTAL KAPAL: 0</div> <!-- Tambahkan elemen ini -->
+    <div id="last-update" onclick="fetchDataAndUpdateMap()">Last Update: N/A</div>
+    <div id="ship-count">Total Visible Ships: 0 </div> <!-- Tambahkan elemen ini -->
     <div id="search-container">
       <input type="text" id="ship-search" placeholder="Cari nama, MMSI atau call sign" oninput="searchShip()" autocomplete="off"/>
       <ul id="ship-suggestions" style="position: absolute; top: 35px; left: 0; background-color: white; list-style-type: none; padding: 0; margin: 0; width: 100%; max-height: 150px; overflow-y: auto; border: 1px solid #ccc; display: none;"></ul>
       <div id="not-found-message" style="position: absolute; top: 35px; left: 0; background-color: white; width: 100%; padding: 10px; border: 1px solid #ccc; display: none;">No ships found</div>
     </div>
 <div id="auto-update">
-    AUTO-UPDATE: 
+    Auto-Update: 
     <select id="update-interval" onchange="setUpdateInterval()">
         <option value="0">Off</option>
         <option value="30000">30 detik</option>
@@ -104,7 +104,7 @@
         <option value="300000">5 menit</option>
     </select>
     <br>
-    LIVE DATA: 
+    Live Only: 
     <select id="live-data" onchange="toggleLiveData()">
         <option value="off">off</option>
         <option value="on">on</option>
