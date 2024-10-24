@@ -267,7 +267,7 @@ function addShipMarker(ship) {
 
 // Fungsi untuk membuat garis heading kapal
 function createHeadingLine(latitude, longitude, heading) {
-    const lengthMeters = 500; // Panjang garis heading dalam meter
+    const lengthMeters = 50; // Panjang garis heading dalam meter
     const earthRadius = 6371000; // Radius bumi dalam meter
     
     // Konversi heading ke radian
