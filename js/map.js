@@ -177,7 +177,7 @@ function countVisibleShips() {
         }
     });
     // Update teks jumlah kapal yang terlihat
-    document.getElementById('ship-count').innerText = `TOTAL VISIBLE SHIPS: ${visibleMarkers}`;
+    document.getElementById('ship-count').innerText = `TOTAL VISIBLE SHIPS: ${visibleMarkers} From ${totalShips}`;
 }
 
 // Event listener untuk memperbarui jumlah kapal terlihat saat peta digerakkan atau di-zoom
@@ -196,7 +196,7 @@ function showLoadingScreen() {
 function hideLoadingScreen() {
     document.getElementById('loading-screen').style.display = 'none'; // Sembunyikan loading screen
 }
-
+let totalShips = 0; 
 // Fungsi untuk mengambil data API dan memperbarui peta
 function fetchDataAndUpdateMap() {
     if (isFirstLoad) {
@@ -210,6 +210,7 @@ function fetchDataAndUpdateMap() {
             var apiTimestamp = data.timestamp;
 
             // Simpan data kapal
+            totalShips = Object.keys(currentMap).length; // Total jumlah kapal dari API
             shipData = currentMap; // Simpan data kapal ke variabel global
 
             updateLastUpdateTimestamp(apiTimestamp);
