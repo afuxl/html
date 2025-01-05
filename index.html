@@ -81,6 +81,37 @@
             z-index: 2000; /* Menambah z-index untuk memastikan berada di atas elemen lain */
             font-size: 14px;
         }
+                .ship-tooltip {
+            position: absolute;
+            color: white; /* Warna teks putih */
+            font-size: 12px; /* Ukuran font */
+            font-weight: bold; /* Huruf tebal */
+            text-align: center; /* Teks rata tengah */
+            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000; /* Outline hitam */
+            background: transparent; /* Transparan, tanpa latar belakang */
+            border: none; /* Tidak ada border */
+            padding: 0; /* Tidak ada padding */
+            pointer-events: none; /* Non-interaktif */
+        }
+        /* Reset gaya tooltip bawaan Leaflet */
+        .leaflet-tooltip {
+            position: absolute;
+            padding: 0; /* Hilangkan padding */
+            background-color: transparent; /* Hapus background */
+            border: none; /* Hapus border */
+            border-radius: 0; /* Hapus radius */
+            color: inherit; /* Warna teks mengikuti elemen induk */
+            white-space: nowrap;
+            box-shadow: none; /* Hapus bayangan */
+            pointer-events: none;
+        }
+
+        .leaflet-tooltip-top:before,
+        .leaflet-tooltip-bottom:before,
+        .leaflet-tooltip-left:before,
+        .leaflet-tooltip-right:before {
+            display: none; /* Hapus panah tooltip */
+    }
     </style>
 </head>
 <body>
