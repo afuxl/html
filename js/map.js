@@ -32,7 +32,6 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
-var headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
 
@@ -215,7 +214,6 @@ function fetchDataAndUpdateMap() {
 
             updateLastUpdateTimestamp(apiTimestamp);
             markers.clearLayers(); // Kosongkan marker yang ada
-            removeHeadingLines(); // Hapus garis heading sebelumnya
 
             for (var key in currentMap) {
                 if (currentMap.hasOwnProperty(key)) {
@@ -432,7 +430,7 @@ function toggleLiveData() {
 
 function updateMapWithFilteredData(liveDataStatus) {
     markers.clearLayers(); // Clear the current markers on the map
-    removeHeadingLines(); // Clear heading lines
+
 
     for (let key in shipData) {
         if (shipData.hasOwnProperty(key)) {
