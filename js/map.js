@@ -251,18 +251,8 @@ function addShipMarker(ship) {
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
 
-        // Periksa level zoom untuk menambahkan label nama kapal
-        const zoomLevel = map.getZoom();
-        if (zoomLevel >= 15) {
-            marker.bindTooltip(name, {
-                permanent: true,
-                direction: "top",
-                className: 'ship-label'
-            }).openTooltip();
-            map.addLayer(marker); // Tambahkan marker langsung ke peta tanpa cluster
-        } else {
-            markers.addLayer(marker); // Tambahkan marker ke cluster jika zoom < 15
-        }
+        // Tambahkan marker ke cluster
+        markers.addLayer(marker);
     }
 }
 
@@ -271,9 +261,10 @@ map.on('zoomend', function() {
     const zoomLevel = map.getZoom();
 
     if (zoomLevel >= 15) {
-        map.removeLayer(markers); // Hapus clustering jika zoom >= 15
         markers.eachLayer(function(marker) {
-            map.addLayer(marker); // Tambahkan semua marker langsung ke peta
+            if (!map.hasLayer(marker)) {
+                map.addLayer(marker); // Tambahkan marker langsung ke peta jika belum ada
+            }
 
             const ship = marker.shipData;
             if (ship) {
@@ -285,12 +276,19 @@ map.on('zoomend', function() {
                 }).openTooltip();
             }
         });
+
+        map.removeLayer(markers); // Hapus clustering setelah semua marker ditambahkan
     } else {
-        map.addLayer(markers); // Tambahkan kembali clustering jika zoom < 15
         markers.eachLayer(function(marker) {
-            marker.unbindTooltip(); // Hapus label jika zoom kurang dari 15
-            map.removeLayer(marker); // Hapus marker langsung dari peta
+            if (map.hasLayer(marker)) {
+                map.removeLayer(marker); // Hapus marker langsung dari peta jika ada
+                marker.unbindTooltip(); // Hapus label
+            }
         });
+
+        if (!map.hasLayer(markers)) {
+            map.addLayer(markers); // Tambahkan kembali clustering jika belum ada
+        }
     }
 });
 
