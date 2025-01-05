@@ -247,7 +247,11 @@ function addShipMarker(ship) {
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
-        marker.bindTooltip(name, { permanent: true, direction: "top", className: 'ship-tooltip' });
+        marker.bindTooltip(name, { 
+            permanent: true, 
+            direction: "top", 
+            className: 'ship-tooltip' 
+        }).openTooltip();
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
         markers.addLayer(marker);
