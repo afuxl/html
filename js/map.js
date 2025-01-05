@@ -32,6 +32,7 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 // Inisialisasi marker cluster dan non-cluster
+
 var markersCluster = L.markerClusterGroup();
 var markersNonCluster = L.layerGroup();
 
@@ -213,7 +214,7 @@ function updateLastUpdateTimestamp(apiTimestamp) {
 
 function countVisibleShips() {
     var visibleMarkers = 0;
-    markers.eachLayer(function (marker) {
+    markersCluster.eachLayer(function (marker) {
         // Hanya hitung marker yang terlihat (tidak dalam bentuk cluster)
         if (map.getBounds().contains(marker.getLatLng())) {
             visibleMarkers++;
@@ -257,7 +258,7 @@ function fetchDataAndUpdateMap() {
             shipData = currentMap; // Simpan data kapal ke variabel global
 
             updateLastUpdateTimestamp(apiTimestamp);
-            markers.clearLayers(); // Kosongkan marker yang ada
+            markersCluster.clearLayers(); // Kosongkan marker yang ada
             removeHeadingLines(); // Hapus garis heading sebelumnya
 
             for (var key in currentMap) {
@@ -268,7 +269,7 @@ function fetchDataAndUpdateMap() {
             }
           //  filterShipMarkers(); // Filter data setelah diperbarui
             toggleLiveData();
-            map.addLayer(markers); // Tambahkan marker ke peta
+            map.addLayer(markersCluster); // Tambahkan marker ke peta
             countVisibleShips(); // Hitung jumlah kapal yang terlihat
         })
         .catch(error => console.error('Error fetching data:', error))
@@ -353,7 +354,7 @@ map.on('zoomend', function() {
 
     // Tambahkan heading line jika zoom level cukup tinggi
     if (zoomLevel >= 14) {
-        markers.eachLayer(function(marker) {
+        markersCluster.eachLayer(function(marker) {
             const ship = marker.shipData;
             if (ship) {
                 const heading = ship[2];
@@ -501,7 +502,7 @@ function toggleLiveData() {
 }
 
 function updateMapWithFilteredData(liveDataStatus) {
-    markers.clearLayers(); // Clear the current markers on the map
+    markersCluster.clearLayers(); // Clear the current markers on the map
     removeHeadingLines(); // Clear heading lines
 
     for (let key in shipData) {
@@ -519,7 +520,7 @@ function updateMapWithFilteredData(liveDataStatus) {
     }
 
     // Add the updated markers back to the map
-    map.addLayer(markers);
+    map.addLayer(markersCluster);
     countVisibleShips(); // Update the visible ship count
 }
 
@@ -533,7 +534,7 @@ function focusOnShip(ship) {
     map.setView([latitude, longitude], 16); // Atur zoom level sesuai kebutuhan
 
     // Temukan marker yang sesuai dan buka popup-nya
-    markers.eachLayer(marker => {
+    markersCluster.eachLayer(marker => {
         if (marker.getLatLng().lat === latitude && marker.getLatLng().lng === longitude) {
             marker.openPopup(); // Buka popup untuk marker kapal
         }
