@@ -237,6 +237,10 @@ function fetchDataAndUpdateMap() {
 
 // Fungsi untuk menambahkan marker kapal dan heading line
 // Fungsi untuk menambahkan marker kapal
+// Inisialisasi grup marker untuk unclustering
+const unclusteredMarkers = new L.LayerGroup();
+
+// Fungsi untuk menambahkan marker kapal
 function addShipMarker(ship) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
@@ -251,24 +255,21 @@ function addShipMarker(ship) {
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
 
-        // Tambahkan marker ke cluster
+        // Tambahkan marker ke grup cluster
         markers.addLayer(marker);
     }
 }
 
-// Event listener untuk memperbarui label nama kapal dan clustering saat zoom berubah
-map.on('zoomend', function() {
+// Event listener untuk memperbarui tampilan marker saat zoom berubah
+map.on('zoomend', function () {
     const zoomLevel = map.getZoom();
 
     if (zoomLevel >= 15) {
         if (map.hasLayer(markers)) {
-            map.removeLayer(markers); // Hapus clustering hanya sekali
+            map.removeLayer(markers); // Hapus clustering dari peta
 
-            markers.eachLayer(function(marker) {
-                if (!map.hasLayer(marker)) {
-                    map.addLayer(marker); // Tambahkan marker langsung ke peta jika belum ada
-                }
-
+            markers.eachLayer(function (marker) {
+                unclusteredMarkers.addLayer(marker); // Pindahkan ke grup unclustering
                 const ship = marker.shipData;
                 if (ship) {
                     const name = ship[8] || ship[0];
@@ -279,23 +280,22 @@ map.on('zoomend', function() {
                     }).openTooltip();
                 }
             });
+
+            map.addLayer(unclusteredMarkers); // Tambahkan grup unclustering ke peta
         }
     } else {
-        markers.eachLayer(function(marker) {
-            if (map.hasLayer(marker)) {
-                map.removeLayer(marker); // Hapus marker langsung dari peta jika ada
+        if (map.hasLayer(unclusteredMarkers)) {
+            unclusteredMarkers.eachLayer(function (marker) {
+                unclusteredMarkers.removeLayer(marker); // Hapus marker dari grup unclustering
                 marker.unbindTooltip(); // Hapus label
-            }
-        });
+            });
 
-        if (!map.hasLayer(markers)) {
-            map.addLayer(markers); // Tambahkan kembali clustering hanya sekali
+            map.removeLayer(unclusteredMarkers); // Hapus grup unclustering dari peta
+            map.addLayer(markers); // Tambahkan kembali clustering ke peta
         }
     }
 });
 
-
-// Fungsi untuk membuat garis heading kapal
 
 
 // Fungsi untuk membuat konten popup kapal
