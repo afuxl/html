@@ -31,7 +31,50 @@ var baseMaps = {
 L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
-var markers = L.markerClusterGroup();
+// Inisialisasi marker cluster dan non-cluster
+var markersCluster = L.markerClusterGroup();
+var markersNonCluster = L.layerGroup();
+
+
+
+// Fungsi untuk memperbarui peta dengan data
+function updateMapWithData(useCluster) {
+    // Hapus semua marker dari layer sebelumnya
+    markersCluster.clearLayers();
+    markersNonCluster.clearLayers();
+
+    for (let key in shipData) {
+        if (shipData.hasOwnProperty(key)) {
+            addShipMarker(shipData[key], useCluster);
+        }
+    }
+
+    // Hapus layer lama dan tambahkan layer baru ke peta
+    map.removeLayer(markersCluster);
+    map.removeLayer(markersNonCluster);
+    if (useCluster) {
+        map.addLayer(markersCluster);
+    } else {
+        map.addLayer(markersNonCluster);
+    }
+}
+
+// Fungsi untuk toggle clustering
+function toggleClustering() {
+    const mode = document.getElementById('cluster-toggle').value;
+    const useCluster = mode === "cluster";
+    updateMapWithData(useCluster);
+}
+
+// Saat halaman dimuat, gunakan mode cluster secara default
+window.onload = function() {
+    fetchDataAndUpdateMap();
+    updateMapWithData(true); // Default menggunakan cluster
+};
+
+
+
+
 var headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
@@ -238,7 +281,7 @@ function fetchDataAndUpdateMap() {
 }
 
 // Fungsi untuk menambahkan marker kapal dan heading line
-function addShipMarker(ship) {
+function addShipMarker(ship, useCluster) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
     const latitude = ship[4];
@@ -252,7 +295,13 @@ function addShipMarker(ship) {
         marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
-        markers.addLayer(marker);
+        
+        if (useCluster) {
+            markersCluster.addLayer(marker);
+        } else {
+            markersNonCluster.addLayer(marker);
+        }
+        
 
         // Periksa level zoom sebelum menambahkan heading line
         if (heading !== null && heading !== undefined) {
@@ -265,6 +314,9 @@ function addShipMarker(ship) {
         }
     }
 }
+
+// Fungsi untuk menambahkan marker kapal
+
 
 // Fungsi untuk membuat garis heading kapal
 function createHeadingLine(latitude, longitude, heading) {
