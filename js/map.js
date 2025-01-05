@@ -261,23 +261,25 @@ map.on('zoomend', function() {
     const zoomLevel = map.getZoom();
 
     if (zoomLevel >= 15) {
-        markers.eachLayer(function(marker) {
-            if (!map.hasLayer(marker)) {
-                map.addLayer(marker); // Tambahkan marker langsung ke peta jika belum ada
-            }
+        if (map.hasLayer(markers)) {
+            map.removeLayer(markers); // Hapus clustering hanya sekali
 
-            const ship = marker.shipData;
-            if (ship) {
-                const name = ship[8] || ship[0];
-                marker.bindTooltip(name, {
-                    permanent: true,
-                    direction: "top",
-                    className: 'ship-label'
-                }).openTooltip();
-            }
-        });
+            markers.eachLayer(function(marker) {
+                if (!map.hasLayer(marker)) {
+                    map.addLayer(marker); // Tambahkan marker langsung ke peta jika belum ada
+                }
 
-        map.removeLayer(markers); // Hapus clustering setelah semua marker ditambahkan
+                const ship = marker.shipData;
+                if (ship) {
+                    const name = ship[8] || ship[0];
+                    marker.bindTooltip(name, {
+                        permanent: true,
+                        direction: "top",
+                        className: 'ship-label'
+                    }).openTooltip();
+                }
+            });
+        }
     } else {
         markers.eachLayer(function(marker) {
             if (map.hasLayer(marker)) {
@@ -287,7 +289,7 @@ map.on('zoomend', function() {
         });
 
         if (!map.hasLayer(markers)) {
-            map.addLayer(markers); // Tambahkan kembali clustering jika belum ada
+            map.addLayer(markers); // Tambahkan kembali clustering hanya sekali
         }
     }
 });
