@@ -252,7 +252,6 @@ function addShipMarker(ship) {
         // Tambahkan tooltip sebagai popup biasa
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
-        markers.addLayer(marker);
 
         // Periksa level zoom untuk menambahkan label nama kapal
         const zoomLevel = map.getZoom();
@@ -262,6 +261,9 @@ function addShipMarker(ship) {
                 direction: "top",
                 className: 'ship-label'
             }).openTooltip();
+            map.addLayer(marker); // Tambahkan marker langsung ke peta tanpa cluster
+        } else {
+            markers.addLayer(marker); // Tambahkan marker ke cluster jika zoom < 15
         }
 
         // Periksa level zoom sebelum menambahkan heading line
@@ -275,27 +277,34 @@ function addShipMarker(ship) {
     }
 }
 
-// Event listener untuk memperbarui label nama kapal saat zoom berubah
+// Event listener untuk memperbarui label nama kapal dan clustering saat zoom berubah
 map.on('zoomend', function() {
     const zoomLevel = map.getZoom();
 
-    markers.eachLayer(function(marker) {
-        const ship = marker.shipData;
-        if (ship) {
-            const name = ship[8] || ship[0];
+    if (zoomLevel >= 15) {
+        map.removeLayer(markers); // Hapus clustering jika zoom >= 15
+        markers.eachLayer(function(marker) {
+            map.addLayer(marker); // Tambahkan semua marker langsung ke peta
 
-            if (zoomLevel >= 15) {
+            const ship = marker.shipData;
+            if (ship) {
+                const name = ship[8] || ship[0];
                 marker.bindTooltip(name, {
                     permanent: true,
                     direction: "top",
                     className: 'ship-label'
                 }).openTooltip();
-            } else {
-                marker.unbindTooltip(); // Hapus label jika zoom kurang dari 15
             }
-        }
-    });
+        });
+    } else {
+        map.addLayer(markers); // Tambahkan kembali clustering jika zoom < 15
+        markers.eachLayer(function(marker) {
+            marker.unbindTooltip(); // Hapus label jika zoom kurang dari 15
+            map.removeLayer(marker); // Hapus marker langsung dari peta
+        });
+    }
 });
+
 
 // Fungsi untuk membuat garis heading kapal
 function createHeadingLine(latitude, longitude, heading) {
