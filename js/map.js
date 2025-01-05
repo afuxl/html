@@ -32,6 +32,7 @@ L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
 
 // Inisialisasi marker cluster
 var markers = L.markerClusterGroup();
+var headingLines = {}; // Objek untuk menyimpan heading line tiap kapal
 var autoUpdateInterval; // Variabel untuk menyimpan interval auto-update
 let shipData = {}; // Variabel untuk menyimpan data kapal
 
@@ -214,6 +215,7 @@ function fetchDataAndUpdateMap() {
 
             updateLastUpdateTimestamp(apiTimestamp);
             markers.clearLayers(); // Kosongkan marker yang ada
+            removeHeadingLines(); // Hapus garis heading sebelumnya
 
             for (var key in currentMap) {
                 if (currentMap.hasOwnProperty(key)) {
@@ -236,67 +238,85 @@ function fetchDataAndUpdateMap() {
 }
 
 // Fungsi untuk menambahkan marker kapal dan heading line
-// Fungsi untuk menambahkan marker kapal
-// Inisialisasi grup marker untuk unclustering
-const unclusteredMarkers = new L.LayerGroup();
-
-// Fungsi untuk menambahkan marker kapal
 function addShipMarker(ship) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
     const latitude = ship[4];
     const longitude = ship[3];
     const course = ship[17] || 0;
+    const heading = ship[2]; // Arah heading kapal
 
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
-        // Tambahkan tooltip sebagai popup biasa
+        marker.bindTooltip(name, { permanent: false, direction: "top", className: 'ship-tooltip' });
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
-
-        // Tambahkan marker ke grup cluster
         markers.addLayer(marker);
+
+        // Periksa level zoom sebelum menambahkan heading line
+        if (heading !== null && heading !== undefined) {
+            const zoomLevel = map.getZoom();
+            if (zoomLevel >= 14) { // Tampilkan heading line hanya jika zoom level 10 atau lebih
+                const headingLine = createHeadingLine(latitude, longitude, heading);
+                map.addLayer(headingLine); // Tambahkan garis heading ke peta
+                headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
+            }
+        }
     }
 }
 
-// Event listener untuk memperbarui tampilan marker saat zoom berubah
-map.on('zoomend', function () {
-    const zoomLevel = map.getZoom();
+// Fungsi untuk membuat garis heading kapal
+function createHeadingLine(latitude, longitude, heading) {
+    const lengthMeters = 50; // Panjang garis heading dalam meter
+    const earthRadius = 6371000; // Radius bumi dalam meter
+    
+    // Konversi heading ke radian
+    const radian = (heading * Math.PI) / 180;
 
-    if (zoomLevel >= 15) {
-        if (map.hasLayer(markers)) {
-            map.removeLayer(markers); // Hapus clustering dari peta
+    // Hitung perubahan lintang (latitude) dan bujur (longitude)
+    const lat2 = latitude + (lengthMeters / earthRadius) * (180 / Math.PI) * Math.cos(radian);
+    const lon2 = longitude + (lengthMeters / earthRadius) * (180 / Math.PI) * Math.sin(radian) / Math.cos(latitude * Math.PI / 180);
 
-            markers.eachLayer(function (marker) {
-                unclusteredMarkers.addLayer(marker); // Pindahkan ke grup unclustering
-                const ship = marker.shipData;
-                if (ship) {
-                    const name = ship[8] || ship[0];
-                    marker.bindTooltip(name, {
-                        permanent: true,
-                        direction: "top",
-                        className: 'ship-label'
-                    }).openTooltip();
-                }
-            });
+    return L.polyline([[latitude, longitude], [lat2, lon2]], { color: 'red', weight: 2 });
+}
 
-            map.addLayer(unclusteredMarkers); // Tambahkan grup unclustering ke peta
-        }
-    } else {
-        if (map.hasLayer(unclusteredMarkers)) {
-            unclusteredMarkers.eachLayer(function (marker) {
-                unclusteredMarkers.removeLayer(marker); // Hapus marker dari grup unclustering
-                marker.unbindTooltip(); // Hapus label
-            });
 
-            map.removeLayer(unclusteredMarkers); // Hapus grup unclustering dari peta
-            map.addLayer(markers); // Tambahkan kembali clustering ke peta
+// Fungsi untuk menghapus semua heading lines dari peta
+function removeHeadingLines() {
+    for (const mmsi in headingLines) {
+        if (headingLines.hasOwnProperty(mmsi)) {
+            map.removeLayer(headingLines[mmsi]);
         }
     }
+    headingLines = {}; // Kosongkan objek headingLines
+}
+
+// Event listener untuk memperbarui tampilan heading line saat zoom berubah
+map.on('zoomend', function() {
+    const zoomLevel = map.getZoom();
+
+    // Hapus semua heading line terlebih dahulu
+    removeHeadingLines();
+
+    // Tambahkan heading line jika zoom level cukup tinggi
+    if (zoomLevel >= 14) {
+        markers.eachLayer(function(marker) {
+            const ship = marker.shipData;
+            if (ship) {
+                const heading = ship[2];
+                const latitude = ship[4];
+                const longitude = ship[3];
+
+                if (heading !== null && heading !== undefined) {
+                    const headingLine = createHeadingLine(latitude, longitude, heading);
+                    map.addLayer(headingLine);
+                    headingLines[ship[0]] = headingLine; // Simpan heading line
+                }
+            }
+        });
+    }
 });
-
-
 
 // Fungsi untuk membuat konten popup kapal
 function createPopupContent(ship) {
@@ -430,7 +450,7 @@ function toggleLiveData() {
 
 function updateMapWithFilteredData(liveDataStatus) {
     markers.clearLayers(); // Clear the current markers on the map
-
+    removeHeadingLines(); // Clear heading lines
 
     for (let key in shipData) {
         if (shipData.hasOwnProperty(key)) {
