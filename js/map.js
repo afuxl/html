@@ -236,36 +236,31 @@ function fetchDataAndUpdateMap() {
 }
 
 // Fungsi untuk menambahkan marker kapal dan heading line
+// Fungsi untuk menambahkan marker kapal
 function addShipMarker(ship) {
     const mmsi = ship[0];
     const name = ship[8] || mmsi;
     const latitude = ship[4];
     const longitude = ship[3];
     const course = ship[17] || 0;
-    const heading = ship[2]; // Arah heading kapal
 
     if (latitude && longitude) {
         const marker = L.marker([latitude, longitude], { icon: createRotatingIcon(course, ship[10]) });
 
-        marker.bindTooltip(name, { 
-            permanent: true, 
-            direction: "top", 
-            className: 'ship-tooltip' 
+        marker.bindTooltip(name, {
+            permanent: true,
+            direction: "top",
+            className: 'ship-tooltip'
         }).openTooltip();
         marker.bindPopup(createPopupContent(ship));
         marker.shipData = ship; // Simpan data kapal ke dalam marker
-        markers.addLayer(marker);
 
-        // Periksa level zoom sebelum menambahkan label
-
-   /*       const zoomLevel = map.getZoom();
-            if (zoomLevel >= 14) { // Tampilkan heading line hanya jika zoom level 10 atau lebih
-                const headingLine = createHeadingLine(latitude, longitude, heading);
-                map.addLayer(headingLine); // Tambahkan garis heading ke peta
-                headingLines[mmsi] = headingLine; // Simpan heading line ke objek untuk pengelolaan
-            } 
-        } */
-    } 
+        if (isClusteringEnabled && map.getZoom() >= 16) {
+            markers.addLayer(marker); // Tambahkan ke cluster jika clustering aktif dan zoom >= 16
+        } else {
+            marker.addTo(map); // Tambahkan langsung ke peta jika clustering tidak aktif atau zoom < 16
+        }
+    }
 }
 
 
@@ -330,15 +325,17 @@ function setUpdateInterval() {
 }
 
 // Ambil pengaturan auto-update saat halaman dimuat
-window.onload = function() {
+window.onload = function () {
     const savedInterval = localStorage.getItem('autoUpdateInterval') || 30000; // Default 30 detik
     document.getElementById('update-interval').value = savedInterval; // Set nilai input
     setUpdateInterval(); // Atur interval auto-update
 
     // Ambil data kapal hanya sekali saat halaman dimuat
     fetchDataAndUpdateMap();
-};
 
+    // Set default clustering
+    toggleClustering();
+};
 
 
 
@@ -446,3 +443,58 @@ function focusOnShip(ship) {
 // Event listeners
 document.getElementById('ship-search').addEventListener('input', searchShip);
 document.getElementById('live-data').addEventListener('change', toggleLiveData);
+
+// Variabel untuk menyimpan status clustering
+let isClusteringEnabled = true; // Default clustering aktif
+let clusterToggle = document.getElementById('cluster-toggle');
+
+// Fungsi untuk mengubah mode clustering
+function toggleClustering() {
+    isClusteringEnabled = clusterToggle.value === 'cluster';
+    updateMarkersBasedOnClustering();
+}
+
+// Fungsi untuk memperbarui marker berdasarkan mode clustering
+function updateMarkersBasedOnClustering() {
+    markers.clearLayers(); // Hapus semua marker yang ada
+
+    for (let key in shipData) {
+        if (shipData.hasOwnProperty(key)) {
+            let ship = shipData[key];
+            addShipMarker(ship); // Tambahkan marker kembali
+        }
+    }
+
+    // Tambahkan marker ke peta sesuai mode clustering
+    if (isClusteringEnabled && map.getZoom() >= 16) {
+        map.addLayer(markers);
+    } else {
+        markers.clearLayers(); // Nonaktifkan clustering
+        for (let key in shipData) {
+            if (shipData.hasOwnProperty(key)) {
+                let ship = shipData[key];
+                addShipMarker(ship); // Tambahkan marker tanpa clustering
+            }
+        }
+    }
+}
+
+// Event listener untuk perubahan zoom
+map.on('zoomend', function () {
+    if (isClusteringEnabled) {
+        if (map.getZoom() >= 16) {
+            map.addLayer(markers); // Aktifkan clustering jika zoom >= 16
+        } else {
+            markers.clearLayers(); // Nonaktifkan clustering jika zoom < 16
+            for (let key in shipData) {
+                if (shipData.hasOwnProperty(key)) {
+                    let ship = shipData[key];
+                    addShipMarker(ship); // Tambahkan marker tanpa clustering
+                }
+            }
+        }
+    }
+});
+
+// Event listener untuk toggle clustering
+clusterToggle.addEventListener('change', toggleClustering);
