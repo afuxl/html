@@ -182,6 +182,22 @@ function countVisibleShips() {
 // Event listener untuk memperbarui jumlah kapal terlihat saat peta digerakkan atau di-zoom
 map.on('moveend', countVisibleShips);
 map.on('zoomend', countVisibleShips);
+// Event listener untuk perubahan zoom
+map.on('zoomend', function () {
+    if (isClusteringEnabled) {
+        if (map.getZoom() >= 16) {
+            map.addLayer(markers); // Aktifkan clustering jika zoom >= 16
+        } else {
+            markers.clearLayers(); // Nonaktifkan clustering jika zoom < 16
+            for (let key in shipData) {
+                if (shipData.hasOwnProperty(key)) {
+                    let ship = shipData[key];
+                    addShipMarker(ship); // Tambahkan marker tanpa clustering
+                }
+            }
+        }
+    }
+});
 
 // Fungsi untuk mengambil data API dan memperbarui peta
 var isFirstLoad = true; // Variabel untuk melacak apakah ini pertama kali data diambil
@@ -479,22 +495,7 @@ function updateMarkersBasedOnClustering() {
     }
 }
 
-// Event listener untuk perubahan zoom
-map.on('zoomend', function () {
-    if (isClusteringEnabled) {
-        if (map.getZoom() >= 16) {
-            map.addLayer(markers); // Aktifkan clustering jika zoom >= 16
-        } else {
-            markers.clearLayers(); // Nonaktifkan clustering jika zoom < 16
-            for (let key in shipData) {
-                if (shipData.hasOwnProperty(key)) {
-                    let ship = shipData[key];
-                    addShipMarker(ship); // Tambahkan marker tanpa clustering
-                }
-            }
-        }
-    }
-});
+
 
 // Event listener untuk toggle clustering
 clusterToggle.addEventListener('change', toggleClustering);
