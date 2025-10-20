@@ -1,0 +1,1345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIS Gathering</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <style>
+        html, body {
+            height: 100%; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        #map { flex-grow: 1; background-color: #f0f0f0; }
+        .header {
+            background: linear-gradient(to right, #005C97, #363795); color: white; padding: 1px 20px;
+            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0;
+            z-index: 1001;
+        }
+        .header h1 { margin: 0; font-size: 1.0em; flex-grow: 1; }
+        #ship-counter { font-size: 1em; background-color: rgba(255,255,255,0.2); padding: 5px 10px; border-radius: 15px; }
+        #toggle-list-btn { /* Tambahkan ID baru ke sini */
+            background-color: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4);
+            color: white; padding: 8px 12px; border-radius: 5px; cursor: pointer;
+            margin-right: 10px; /* Sesuaikan margin */
+            font-size: 0.9em; transition: background-color 0.2s;
+        }
+        #toggle-list-btn:hover { background-color: rgba(255, 255, 255, 0.3); } /* Sesuaikan hover */
+        #ship-list-panel {
+            position: absolute; top: 62px; right: 1px; width: auto; max-width: 600px;
+            max-height: calc(100vh - 150px); background: white; border: 1px solid #ddd;
+            border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000;
+            display: flex; flex-direction: column; display: none;
+        }
+        #ship-list-header { padding: 12px 15px; font-weight: bold; border-bottom: 1px solid #ddd; background-color: #f7f7f7; }
+        #ship-list-controls { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #ddd; }
+        #ship-list-search { flex-grow: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        #column-chooser { position: relative; margin-left: 10px; }
+        #column-chooser-btn { padding: 8px; background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; }
+        #column-chooser-dropdown { display: none; position: absolute; top: 100%; right: 0; background-color: white; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.15); z-index: 1002; padding: 10px; white-space: nowrap; }
+        #column-chooser-dropdown.visible { display: block; }
+        #column-chooser-dropdown label { display: block; margin-bottom: 5px; font-weight: normal; font-size: 0.9em; }
+        #column-chooser-dropdown input { margin-right: 5px; }
+
+        #ship-list-container { overflow: auto; flex-grow: 1; }
+        #ship-list-table { width: 100%; border-collapse: collapse; }
+        #ship-list-table th, #ship-list-table td {
+            padding: 8px 10px; border-bottom: 1px solid #eee;
+            text-align: left; font-size: 0.85em;
+            white-space: nowrap;
+        }
+        #ship-list-table th { background-color: #f9f9f9; font-weight: 600; position: sticky; top: 0; z-index: 1; }
+        #ship-list-table tbody tr { cursor: pointer; transition: background-color 0.2s; }
+        #ship-list-table tbody tr:hover { background-color: #f0f0f0; }
+        .ship-name-cell { font-size: 1em; }
+        #ship-list-table th[data-sort] { cursor: pointer; position: relative; padding-right: 20px; }
+        #ship-list-table th[data-sort]::after { content: ''; position: absolute; right: 8px; top: 50%; border: 4px solid transparent; opacity: 0.3; }
+        #ship-list-table th.sort-asc::after { transform: translateY(-70%); border-bottom-color: #333; opacity: 1; }
+        #ship-list-table th.sort-desc::after { transform: translateY(-30%); border-top-color: #333; opacity: 1; }
+
+        #info-panel { position: absolute; top: 63px; left: 60px; width: 340px; max-height: calc(100vh - 160px); background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; overflow-y: auto; display: none; }
+        .info-header { padding: 1px 15px; background-color: #f7f7f7; border-bottom: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center; cursor: move; }
+        .info-header h3 { margin: 0; font-size: 1.1em; }
+        .close-btn { cursor: pointer; font-size: 1.5em; font-weight: bold; color: #888; }
+        .close-btn:hover { color: #333; }
+        .info-details { padding: 15px; }
+
+        /* Transisi untuk ikon kapal */
+        .ship-marker-container .ship-icon {
+            transition: transform 0.5s linear, filter 0.2s ease-out, stroke 0.2s ease-out, stroke-width 0.2s ease-out;
+        }
+
+        /* CSS untuk highlight ikon kapal */
+        .ship-marker-container .ship-icon.highlighted {
+            filter: drop-shadow(0 0 4px rgba(255, 255, 0, 0.8)) drop-shadow(0 0 8px rgba(255, 255, 0, 0.6)); /* Yellow glow */
+        }
+        .ship-marker-container .ship-icon.highlighted path,
+        .ship-marker-container .ship-icon.highlighted circle {
+            stroke-width: 2.5 !important; /* Thicker outline */
+            stroke: yellow !important;   /* Yellow outline */
+        }
+
+        .ship-info-table { width: 100%; font-family: Arial, sans-serif; border-collapse: collapse; font-size: 14px; background-color: #f9fafe; }
+        .ship-info-table td { padding: 8px 12px; vertical-align: top; border-bottom: 1px solid #e0e0e0; }
+        .ship-info-table td[colspan] { background-color: #f0f2f7; }
+        .ship-info-table span.label { display: block; font-size: 12px; color: #555; margin-bottom: 4px; }
+        .ship-info-table span.value { font-weight: bold; color: #000; display: flex; align-items: center; }
+        .flex-row { display: flex; justify-content: space-between; gap: 16px; }
+        .flex-row > div { flex: 1; }
+        .fi { margin-right: 8px; font-size: 1.2em; }
+
+        /* Custom style for Leaflet Controls position to enable dynamic alignment */
+        .leaflet-control-container .leaflet-bottom.leaflet-right,
+        .leaflet-control-container .leaflet-bottom.leaflet-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end; /* Default to right-aligned */
+            gap: 10px; /* Space between controls */
+        }
+        .leaflet-control-container .leaflet-bottom.leaflet-left {
+             align-items: flex-start; /* Default to left-aligned */
+        }
+
+        /* Specific CSS to override Leaflet default for dynamic right positioning */
+        .leaflet-right.shifted-left {
+            right: auto !important; /* Override default right */
+            left: 20px; /* Example fixed left position */
+            align-items: flex-start;
+        }
+        .leaflet-bottom.shifted-left {
+            bottom: 20px; /* Keep consistent bottom */
+        }
+        #ship-counter:hover {
+        background-color: rgba(255,255,255,0.3);
+        border-radius: 10px;
+        }
+ /* Status container styles (copied from index.html) */
+           #status-container {
+            position: relative; /* Ubah dari relative menjadi fixed */
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 35px; /* Default height for collapsed view, increased for wrapped text */
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.85);
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            z-index: 1000;
+            padding: 0 10px;
+            gap: 10px;
+            box-sizing: border-box;
+            cursor: pointer; /* Make the whole container clickable */
+            transition: height 0.3s ease-in-out, max-height 0.3s ease-in-out;
+            overflow: hidden; /* Hide overflow in collapsed state */
+        }
+        /* Expanded state for status container */
+        #status-container.status-expanded {
+            height: auto; /* Allow height to grow based on content */
+            max-height: 12vh; /* Limit max height for scrollability */
+            overflow-y: auto; /* Enable scrolling if content overflows */
+          /* flex-direction: column; /* Stack items vertically */
+            align-items: flex-start;
+            padding-bottom: 10px; /* Add some padding at the bottom */
+            cursor: default; /* Change cursor when expanded */
+        }
+
+        #status-container .status-label {
+            flex-shrink: 0;
+            white-space: nowrap;
+            font-weight: bold;
+            padding-top: 5px; /* Adjust padding for expanded view */
+            padding-bottom: 5px;
+        }
+
+        #status-collapsed-view {
+            display: flex;
+            width: 100%;
+            height: 100%; /* Ensure this takes full height of parent */
+            align-items: flex-start; /* Align to top for wrapped text */
+        }
+
+        #status-container.status-expanded #status-collapsed-view {
+            display: none; /* Hide collapsed view when expanded */
+        }
+
+        #status-expanded-view {
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            width: 100%;
+            box-sizing: border-box;
+            padding-right: 30px; /* Make space for close button */
+            position: relative; /* For close button positioning */
+        }
+        #status-container.status-expanded #status-expanded-view {
+            display: flex; /* Show expanded view when expanded */
+        }
+
+        #status-expanded-content {
+            width: 100%;
+            padding: 5px 0;
+            line-height: 1.4;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            white-space: pre-wrap; /* Preserve whitespace and wrap text */
+            word-break: break-word; /* Break long words */
+        }
+
+        .close-status-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease-in-out;
+            z-index: 1001; /* Ensure button is above content */
+        }
+        .close-status-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* New CSS for fade effect */
+        #status-ticker-display {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .status-ticker-item {
+            position: absolute;
+            width: 100%;
+            white-space: nowrap;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            color: white;
+            left: 0;
+            text-align: left;
+            padding-left: 10px;
+            box-sizing: border-box;
+            opacity: 0; /* Awalnya tersembunyi */
+            transition: opacity 1s ease-in-out; /* Transisi untuk fade */
+        }
+
+        .status-ticker-item.active {
+            opacity: 1; /* Tampilkan elemen aktif */
+        }
+        #sidebar {
+            width: 0; /* Awalnya tersembunyi */
+            background-color: rgba(255, 255, 255, 0.95);
+            overflow-x: hidden; /* Sembunyikan overflow horizontal */
+            transition: width 0.5s ease; /* Transisi lebar sidebar */
+            padding-top: 20px;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.15);
+            flex-shrink: 0; /* Mencegah sidebar mengecil */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        #sidebar.open {
+            width: 200px; /* Lebar sidebar saat terbuka */
+        }
+            #sidebar-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 0; /* Hapus padding default */
+        }
+
+        .sidebar-menu-item {
+            display: block;
+            padding: 10px 15px;
+            background-color: #f0f0f0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: 600;
+            transition: background-color 0.2s ease-in-out;
+            text-align: center;
+        }
+
+        .sidebar-menu-item:hover {
+            background-color: #e0e0e0;
+            cursor: pointer;
+        }
+
+        .sidebar-section-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+            padding: 0 20px; /* Padding agar sejajar dengan input */
+        }
+        #menu-toggle-button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5em;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background-color 0.2s ease-in-out;
+        }
+
+        #menu-toggle-button:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        #map-container {
+            flex-grow: 1; /* Peta mengisi sisa ruang */
+            height: 100%;
+            position: relative; /* Penting untuk Leaflet */
+            transition: width 0.5s ease; /* Transisi lebar peta */
+        }
+        #map {
+            height: 100%; /* Peta mengisi penuh container-nya */
+            width: 100%;
+        }
+        #main-container {
+            display: flex;
+            height: calc(100% - 60px);
+            transition: margin-left 0.5s ease;
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <button id="menu-toggle-button" onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i>
+        </button>
+        <h1>AISMotion V2</h1>
+        <div id="ship-counter" onclick="toggleShipList()" style="cursor:pointer;" title="Klik untuk menampilkan daftar kapal">Kapal Aktif</div>
+
+    </div>
+<div id="main-container">
+    <div id="ship-list-panel">
+        <div id="ship-list-controls">
+            <input type="text" id="ship-list-search" onkeyup="filterShipList()" placeholder="Cari nama kapal atau MMSI...">
+            <div id="column-chooser">
+                <button id="column-chooser-btn">⚙️ Pilih Kolom</button>
+                <div id="column-chooser-dropdown">
+                    </div>
+            </div>
+        </div>
+        <div id="ship-list-container">
+            <table id="ship-list-table">
+                </table>
+        </div>
+    </div>
+        <div id="sidebar">
+            <div id="sidebar-menu">
+                <a href="#" class="sidebar-menu-item" onclick="window.location.href='/history.html';">Playback</a>
+            </div>
+            </div>
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+
+    <div id="info-panel">
+        <div class="info-header">
+            <h3 id="info-ship-name">Detail Kapal</h3>
+            <span class="close-btn" onclick="toggleInfoPanel(false)">&times;</span>
+        </div>
+        <div class="info-details" id="info-details-content"></div>
+    </div>
+</div>
+   
+
+    <!-- Status koneksi di bagian bawah (dari index.html) -->
+    <div id="status-container" title="Klik untuk expand/collapse">
+        <span class="status-label">Status Koneksi:</span>
+        <div id="status-collapsed-view">
+            <div id="status-ticker-display">
+                <!-- Hanya satu elemen untuk menampilkan teks, akan diganti isinya -->
+                <span id="status-text" class="status-ticker-item active"></span>
+            </div>
+        </div>
+        <div id="status-expanded-view">
+            <div id="status-expanded-content"></div>
+            <button class="close-status-btn" onclick="toggleStatusContainer(false)">&times;</button>
+        </div>
+    </div>
+ 
+ 
+    <script>
+        const map = L.map('map', {
+            zoomControl: false // Mencegah munculnya kontrol zoom default
+        }).setView([-4.073226, 122.7448634], 9);
+
+        // === Base Layers ===
+        const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        });
+
+        const satellite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google Satellite'
+        });
+
+        const terrain = L.tileLayer('https://{s}.google.com/vt/lyrs=p&x={x}&y={y}&z={z}', {
+            maxZoom: 20,
+            subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+            attribution: '© Google Terrain'
+        });
+
+        const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 20,
+            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, and the GIS User Community'
+        });
+
+        // === Overlay ENC Indonesia (Vector Tiles) ===
+       /* const encIndonesia = L.vectorGrid.protobuf("http://202.150.138.45/chartApi/utt-mvt/styles/tiles/{z}/{x}/{y}.mvt", {
+            maxNativeZoom: 17,
+            vectorTileLayerStyles: {
+                "utt-mvt": {
+                    weight: 1,
+                    color: "#3388ff",
+                    fillColor: "#b3e5fc",
+                    fillOpacity: 0.3,
+                    opacity: 0.8
+                },
+                "depths": {
+                    color: "#2196f3",
+                    weight: 1,
+                    fillColor: "#bbdefb",
+                    fillOpacity: 0.2
+                },
+                "buoys": {
+                    color: "#ffeb3b",
+                    weight: 2,
+                    radius: 4
+                },
+                "lights": {
+                    color: "#ffffff",
+                    weight: 2,
+                    radius: 3
+                },
+                "wrecks": {
+                    color: "#f44336",
+                    weight: 2,
+                    dashArray: "4, 4"
+                },
+                "land": {
+                    fill: true,
+                    fillColor: "#e0e0e0",
+                    fillOpacity: 1,
+                    color: "#9e9e9e",
+                    weight: 0.5
+                }
+            },
+            interactive: true,
+            attribution: "ENC © Pushidrosal / BIG"
+        });*/
+
+        // === OpenSeaMap Overlay (opsional tambahan) ===
+        const openSeaMap = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+            attribution: '© OpenSeaMap contributors'
+        });
+
+        // === Layer Track Kapal (akan dikelola secara internal) ===
+        // Mengubah ini menjadi objek untuk menyimpan polyline per MMSI, bukan layer group
+        let shipTracksLayers = {}; // Menyimpan objek L.Polyline untuk setiap kapal
+
+        // === Daftar Layer ===
+        const baseMaps = {
+            "OpenStreetMap": osm,
+            "Google Satellite": satellite,
+            "Google Terrain": terrain,
+            "Esri World Imagery": esri
+        };
+
+        const overlayMaps = {
+           // "ENC Indonesia (Pushidrosal)": encIndonesia,
+            "OpenSeaMap": openSeaMap,
+            "Tampilkan Track Kapal": {
+                layer: L.layerGroup(), // Placeholder layer group for the checkbox
+                name: "Tampilkan Track Kapal",
+                control: null // To store the actual control object for this
+            }
+        };
+
+        // Tambahkan layer group 'Tampilkan Track Kapal' ke peta, tetapi kelola polylinenya secara manual di updateData
+        map.addLayer(overlayMaps["Tampilkan Track Kapal"].layer);
+
+
+        // === Kontrol Layer ===
+        const layerControl = L.control.layers(baseMaps, { "Tampilkan Track Kapal": overlayMaps["Tampilkan Track Kapal"].layer }, { position: 'bottomleft' }).addTo(map);
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+        let shipMarkers = {};
+        let selectedMMSI = null; // MMSI kapal yang sedang dipilih (panel info terbuka)
+        let allShipsData = [];
+        let sortColumn = 'shipname';
+        let sortDirection = 'asc';
+        
+
+        // Variabel global untuk manajemen status ticker
+        let statusMessagesQueue = [];
+        let currentMessageIndex = 0;
+        let tickerAnimationInterval = null; // Interval untuk animasi ticker
+
+        const columnConfig = {
+            shipname: { label: 'Nama Kapal', default: true },
+            country: { label: 'Bendera', default: true },
+            ship_type_code: { label: 'Tipe', default: true },
+            sog: { label: 'Kecepatan', default: true },
+            cog: { label: 'Arah', default: false },
+            mmsi: { label: 'MMSI', default: true },
+            last_update: { label: 'Last Signal', default: true },
+            imo: { label: 'IMO', default: false },
+            callsign: { label: 'Call Sign', default: false },
+            'class': { label: 'Kelas AIS', default: false },
+            message_type: { label: 'Tipe Pesan', default: false },
+            destination: { label: 'Tujuan', default: false },
+            source_company: { label: 'Sumber', default: false }
+        };
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 500);
+        }
+        /**
+         * Memuat preferensi kolom dari localStorage.
+         */
+        function loadColumnPreferences() {
+            const saved = localStorage.getItem('shipListColumns');
+            if (saved) {
+                const visibleColumns = JSON.parse(saved);
+                for (const key in columnConfig) {
+                    columnConfig[key].visible = visibleColumns.includes(key);
+                }
+            } else {
+                for (const key in columnConfig) {
+                    columnConfig[key].visible = columnConfig[key].default;
+                }
+            }
+        }
+
+        /**
+         * Menyimpan preferensi kolom ke localStorage.
+         */
+        function saveColumnPreferences() {
+            const visibleColumns = Object.keys(columnConfig).filter(key => columnConfig[key].visible);
+            localStorage.setItem('shipListColumns', JSON.stringify(visibleColumns));
+        }
+
+        /**
+         * Menyimpan preferensi layer (base layer dan overlay) ke localStorage.
+         */
+        function saveLayerPreferences() {
+            let activeBaseLayer = '';
+            for (const name in baseMaps) {
+                if (map.hasLayer(baseMaps[name])) {
+                    activeBaseLayer = name;
+                    break;
+                }
+            }
+
+            const activeOverlays = [];
+            // Hanya simpan overlay selain 'Tampilkan Track Kapal' secara langsung
+            for (const name in overlayMaps) {
+                if (name !== "Tampilkan Track Kapal" && map.hasLayer(overlayMaps[name])) {
+                    activeOverlays.push(name);
+                }
+            }
+            // Juga cek status "Tampilkan Track Kapal" secara terpisah
+            if (map.hasLayer(overlayMaps["Tampilkan Track Kapal"].layer)) {
+                activeOverlays.push("Tampilkan Track Kapal");
+            }
+
+
+            localStorage.setItem('leafletBaseLayer', activeBaseLayer);
+            localStorage.setItem('leafletOverlays', JSON.stringify(activeOverlays));
+        }
+
+        /**
+         * Memuat preferensi layer dari localStorage dan menerapkannya ke peta.
+         */
+        function loadLayerPreferences() {
+            const savedBaseLayer = localStorage.getItem('leafletBaseLayer');
+            const savedOverlays = JSON.parse(localStorage.getItem('leafletOverlays') || '[]');
+
+            // Remove all existing base layers
+            for (const name in baseMaps) {
+                if (map.hasLayer(baseMaps[name])) {
+                    map.removeLayer(baseMaps[name]);
+                }
+            }
+
+            // Add the saved base layer or default to OSM
+            if (savedBaseLayer && baseMaps[savedBaseLayer]) {
+                map.addLayer(baseMaps[savedBaseLayer]);
+            } else {
+                map.addLayer(osm); // Default base layer
+            }
+
+            // Handle overlays
+            for (const name in overlayMaps) {
+                const layer = overlayMaps[name].layer || overlayMaps[name]; // Handle both structure types
+                if (savedOverlays.includes(name) && !map.hasLayer(layer)) {
+                    map.addLayer(layer);
+                } else if (!savedOverlays.includes(name) && map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            }
+        }
+
+        // Event listener untuk perubahan base layer
+        map.on('baselayerchange', function(e) {
+            saveLayerPreferences();
+        });
+
+        // Event listener untuk penambahan overlay
+        map.on('overlayadd', function(e) {
+            saveLayerPreferences();
+            if (e.name === 'Tampilkan Track Kapal') {
+                updateData(); // Perbarui data untuk menampilkan track semua kapal
+            }
+        });
+
+        // Event listener untuk penghapusan overlay
+        map.on('overlayremove', function(e) {
+            saveLayerPreferences();
+            if (e.name === 'Tampilkan Track Kapal') {
+                // Hapus semua track yang ada di peta jika overlay track dimatikan
+                for (const mmsi in shipTracksLayers) {
+                    if (map.hasLayer(shipTracksLayers[mmsi])) {
+                        map.removeLayer(shipTracksLayers[mmsi]);
+                    }
+                }
+                shipTracksLayers = {}; // Kosongkan objek track
+            }
+        });
+
+
+        const MOVING_SPEED_THRESHOLD_KNOTS = 0.5;
+        const NAV_STATUS_MAP = { 0: "Under way using engine", 1: "At anchor", 2: "Not under command", 3: "Restricted manoeuverability", 4: "Constrained by draught", 5: "Moored", 6: "Aground", 7: "Engaged in Fishing", 8: "Under way sailing", 15: "Not defined" };
+        const SHIP_TYPE_MAP = { 30: "Fishing", 31: "Towing", 32: "Towing", 35: "Military ops", 40: "High-speed craft", 50: "Pilot Vessel", 52: "Tug", 60: "Passenger", 70: "Cargo", 80: "Tanker", 90: "Other" };
+        const countryCodeMap = {
+            "INDONESIA": "id", "SINGAPORE": "sg", "MALAYSIA": "my", "PHILIPPINES": "ph",
+            "VIETNAM": "vn", "THAILAND": "th", "CHINA": "cn", "JAPAN": "jp",
+            "KOREA, REPUBLIC OF": "kr", "SOUTH KOREA": "kr", "TAIWAN": "tw", "AUSTRALIA": "au",
+            "PANAMA": "pa", "LIBERIA": "lr", "UNITED KINGDOM": "gb", "USA": "us", "UNITED STATES": "us",
+            "MALTA": "mt", "CYPRUS": "cy", "NETHERLANDS": "nl", "ST KITTS & NEVIS": "kn",
+            "GERMANY": "de", "BELGIUM": "be", "FRANCE": "fr", "CANADA": "ca", "MEXICO": "mx",
+            "BRITISH VIRGIN ISLANDS": "vg", "COOK ISLANDS": "ck", "KIRIBATI": "ki",
+            "MARSHALL ISLANDS": "mh", "VANUATU": "vu", "SOUTH AFRICA": "za",
+            "ANTIGUA AND BARBUDA": "ag", "HONG KONG": "hk"
+        };
+        function getCountryCode(countryName) {
+            if (!countryName) return 'xx';
+            const upperCountryName = String(countryName).toUpperCase();
+            return countryCodeMap[upperCountryName] || 'xx';
+        }
+        function formatValue(value, unit = '') { const unavailableValues = [null, undefined, '']; if (unavailableValues.includes(value)) return '—'; return `${value} ${unit}`.trim(); }
+        function getShipTypeString(code) { if (!code) return '—'; if (code >= 70 && code <= 79) return SHIP_TYPE_MAP[70]; if (code >= 60 && code <= 69) return SHIP_TYPE_MAP[60]; if (code >= 80 && code <= 89) return SHIP_TYPE_MAP[80]; return SHIP_TYPE_MAP[code] || `Other (${code})`; }
+        function formatETA(ship) { if (ship.eta_month && ship.eta_day && ship.eta_hour !== null && ship.eta_minute !== null) { const day = String(ship.eta_day).padStart(2, '0'); const month = String(ship.eta_month).padStart(2, '0'); const hour = String(ship.eta_hour).padStart(2, '0'); const minute = String(ship.eta_minute).padStart(2, '0'); const year = new Date().getFullYear(); return `${day}/${month}/${year} ${hour}:${minute}`; } return '—'; }
+        function formatLastSignal(timestamp) {
+            if (!timestamp) return '—';
+
+            const now = Date.now() / 1000;
+            let diff = Math.floor(now - timestamp);
+
+            if (diff < 60) {
+                return `${diff}s lalu`;
+            }
+
+            const days = Math.floor(diff / 86400);
+            diff %= 86400;
+            const hours = Math.floor(diff / 3600);
+            diff %= 3600;
+            const minutes = Math.floor(diff / 60);
+            const seconds = diff % 60;
+
+            let parts = [];
+            if (days > 0) parts.push(`${days}d`);
+            if (hours > 0) parts.push(`${hours}h`);
+            if (minutes > 0) parts.push(`${minutes}m`);
+            if (seconds > 0) parts.push(`${seconds}s`);
+
+            return parts.join(' ') + ' lalu';
+        }
+
+        function decimalToDMS(decimal, isLat) { if (decimal === null || decimal === undefined) return '—'; const dir = isLat ? (decimal >= 0 ? 'N' : 'S') : (decimal >= 0 ? 'E' : 'W'); const absDecimal = Math.abs(decimal); const degrees = Math.floor(absDecimal); const minutesNotTruncated = (absDecimal - degrees) * 60; const minutes = Math.floor(minutesNotTruncated); const seconds = ((minutesNotTruncated - minutes) * 60).toFixed(2); return `${degrees}° ${minutes}' ${seconds}" ${dir}`; }
+
+        function toggleInfoPanel(show, mmsi = null) {
+            const panel = document.getElementById('info-panel');
+            if (show && mmsi) {
+                selectedMMSI = mmsi;
+                panel.style.display = 'block';
+                updateInfoPanel(mmsi);
+                updateHighlightVisuals();
+            } else {
+                selectedMMSI = null; // Memperbaiki kesalahan penulisan di sini
+                panel.style.display = 'none';
+                updateHighlightVisuals();
+            }
+            // Panggil updateData untuk memastikan track diperbarui setelah selectedMMSI berubah
+            updateData();
+        }
+        function makeDraggable(elmnt) { let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0; const dragHandle = elmnt.querySelector(".info-header"); if (dragHandle) { dragHandle.onmousedown = dragMouseDown; } else { elmnt.onmousedown = dragMouseDown; } function dragMouseDown(e) { e = e || window.event; if (e.target.classList.contains('close-btn')) return; e.preventDefault(); pos3 = e.clientX; pos4 = e.clientY; document.onmouseup = closeDragElement; document.onmousemove = elementDrag; } function elementDrag(e) { e = e || window.event; e.preventDefault(); pos1 = pos3 - e.clientX; pos2 = pos4 - e.clientY; pos3 = e.clientX; pos4 = e.clientY; elmnt.style.top = (elmnt.offsetTop - pos2) + "px"; elmnt.style.left = (elmnt.offsetLeft - pos1) + "px"; elmnt.style.right = 'auto'; } function closeDragElement() { document.onmouseup = null; document.onmousemove = null; } }
+        function toggleShipList() { const panel = document.getElementById('ship-list-panel'); const button = document.getElementById('toggle-list-btn'); if (panel.style.display === 'none' || panel.style.display === '') { panel.style.display = 'flex'; button.innerHTML = '✕ Sembunyikan Daftar'; } else { panel.style.display = 'none'; button.innerHTML = '☰ Daftar Kapal'; } }
+        function onShipListClick(mmsi) { const marker = shipMarkers[mmsi]; if (marker) { map.setView(marker.getLatLng(), 13); toggleInfoPanel(true, mmsi); } }
+       // Fungsi updateShipList dan fungsi sorting baru
+
+        function getCellHTML(ship, key) {
+            switch(key) {
+                case 'shipname': return `<td class="ship-name-cell">${formatValue(ship.shipname)}</td>`;
+                case 'country': return `<td><span class="fi fi-${getCountryCode(ship.country)}"></span> ${formatValue(ship.country)}</td>`;
+                case 'ship_type_code': return `<td>${getShipTypeString(ship.ship_type_code)}</td>`;
+                case 'sog': return `<td>${formatValue(ship.sog, 'kn')}</td>`;
+                case 'cog': return `<td>${formatValue(ship.cog, '°')}</td>`;
+                case 'last_update': return `<td>${formatLastSignal(ship.last_update)}</td>`;
+                case 'source_company': return `<td>${formatValue(ship.source_company)}</td>`;
+                default: return `<td>${formatValue(ship[key])}</td>`;
+            }
+        }
+
+        function renderShipListTable() {
+            const table = document.getElementById('ship-list-table');
+            table.innerHTML = ''; // Kosongkan tabel sepenuhnya
+
+            // Buat thead
+            const thead = table.createTHead();
+            const headerRow = thead.insertRow();
+            for (const key in columnConfig) {
+                if (columnConfig[key].visible) {
+                    const th = document.createElement('th');
+                    th.dataset.sort = key;
+                    th.textContent = columnConfig[key].label;
+                    headerRow.appendChild(th);
+                }
+            }
+
+            // Buat tbody
+            const tbody = table.createTBody();
+            tbody.id = 'ship-list-tbody';
+            for (const ship of allShipsData) {
+                 if (ship.lat && ship.lon) {
+                    const tr = tbody.insertRow(); // Memperbaiki: Menggunakan insertRow() untuk membuat baris
+                    tr.dataset.mmsi = ship.mmsi;
+                    tr.onclick = () => onShipListClick(ship.mmsi);
+                    for (const key in columnConfig) {
+                        if (columnConfig[key].visible) {
+                            // Memperbaiki: Langsung memasukkan string HTML <td> ke dalam baris
+                            tr.insertAdjacentHTML('beforeend', getCellHTML(ship, key));
+                        }
+                    }
+                }
+            }
+            addSortListeners();
+            updateSortIndicators();
+            filterShipList();
+        }
+
+        function sortData() {
+            allShipsData.sort((a, b) => {
+                let valA = a[sortColumn], valB = b[sortColumn];
+                const valAExists = valA !== null && valA !== undefined, valBExists = valB !== null && valB !== undefined;
+                if (!valAExists) valA = -Infinity; if (!valBExists) valB = -Infinity;
+                if (typeof valA === 'string') { valA = valA.toLowerCase(); valB = String(valB).toLowerCase(); }
+                if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        }
+
+         function addSortListeners() {
+            document.querySelectorAll('#ship-list-table th[data-sort]').forEach(header => {
+                header.addEventListener('click', () => {
+                    const newSortColumn = header.dataset.sort;
+                    sortDirection = (sortColumn === newSortColumn && sortDirection === 'asc') ? 'desc' : 'asc';
+                    sortColumn = newSortColumn;
+                    sortData();
+                    renderShipListTable();
+                });
+            });
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('#ship-list-table th[data-sort]').forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (header.dataset.sort === sortColumn) {
+                    header.classList.add(sortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function populateColumnChooser() {
+            const dropdown = document.getElementById('column-chooser-dropdown');
+            dropdown.innerHTML = '';
+            for (const key in columnConfig) {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `col-check-${key}`;
+                checkbox.dataset.key = key;
+                checkbox.checked = columnConfig[key].visible;
+
+                checkbox.addEventListener('change', (e) => {
+                    columnConfig[e.target.dataset.key].visible = e.target.checked;
+                    saveColumnPreferences();
+                    renderShipListTable();
+                });
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(columnConfig[key].label));
+                dropdown.appendChild(label);
+            }
+        }
+
+        function filterShipList() {
+            const input = document.getElementById('ship-list-search');
+            const filter = input.value.toUpperCase();
+            const tbody = document.getElementById('ship-list-tbody');
+            if (!tbody) return;
+            const rows = tbody.rows;
+            for (let i = 0; i < rows.length; i++) {
+                const nameValue = allShipsData[i]?.shipname || '';
+                const mmsiValue = String(allShipsData[i]?.mmsi || '');
+                if (nameValue.toUpperCase().includes(filter) || mmsiValue.toUpperCase().includes(filter)) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+        function getShipColorByType(code) {
+            if (!code) return '#273199'; // Default abu-abu terang
+
+            if (code >= 20 && code < 30) return '#9B54C8'; // WIG (ungu muda)
+            if (code >= 30 && code < 40) return '#39A83C'; // Fishing, Towing (hijau muda)
+            if (code === 31 || code === 32) return '#D67957'; // Towing (coklat muda)
+            if (code === 33) return '#FF9575'; // Dredging (oranye muda)
+            if (code === 34) return '#80DEEA'; // Diving ops (biru toska terang)
+            if (code === 35) return '#FF8A80'; // Military ops (merah terang)
+            if (code === 36) return '#98D350'; // Sailing (hijau lime)
+            if (code === 37) return '#FFEC60'; // Pleasure craft / yacht (kuning cerah)
+            if (code === 38) return '#F24D87'; // SAR (pink terang)
+            if (code === 39) return '#BA3A5B'; // Tug (coklat lembut)
+
+            if (code === 50) return '#B77CE1'; // Pilot vessel (abu terang)
+            if (code === 51) return '#FFD54F'; // SAR vessel (kuning emas)
+            if (code === 52) return '#A02439'; // Tug (coklat muda)
+            if (code === 53) return '#DCE775'; // Port tender (lime terang)
+            if (code === 54) return '#FFF59D'; // Anti-pollution (kuning lembut)
+            if (code === 55) return '#FFB74D'; // Law enforcement (oranye terang)
+            if (code === 58) return '#A5D6A7'; // Medical transport (hijau terang)
+            if (code === 59) return '#B0BEC5'; // Noncombatant ship (abu kebiruan)
+
+            if (code >= 60 && code < 70) return '#1E3AC9'; // Passenger (biru terang)
+            if (code >= 70 && code < 80) return '#64B5F6'; // Cargo (biru langit)
+            if (code >= 80 && code < 90) return '#FF0776'; // Tanker (oranye pucat)
+            if (code >= 90 && code <= 99) return '#3DDB77'; // Other (abu-abu muda)
+
+            return '#273199'; // Fallback
+        }
+
+        // Fungsi untuk menghasilkan HTML ikon kapal (marker)
+        function getShipIconHtml(ship, isMoving, isHighlighted, labelHTMLContent = '') {
+            const fillColor = getShipColorByType(ship.ship_type_code);
+            const course = ship.cog || 0;
+
+            // Tambahkan kelas CSS 'highlighted' jika isHighlighted adalah true
+            const iconSvgClass = isHighlighted ? 'ship-icon highlighted' : 'ship-icon';
+
+            let iconInnerHtml;
+            if (isMoving) {
+                iconInnerHtml = `
+                    <svg class="${iconSvgClass}" style="transform: rotate(${course}deg);" width="16" height="16" viewBox="0 0 24 24" fill="${fillColor}" stroke="white" stroke-width="0.1">
+                        <path d="M12 2L2.5 21.5h19L12 2z"/>
+                    </svg>
+                `;
+            } else {
+                iconInnerHtml = `
+                    <svg class="${iconSvgClass}" width="10" height="10" viewBox="0 0 24 24" fill="${fillColor}" stroke="white" stroke-width="0.1">
+                        <circle cx="12" cy="12" r="10"/>
+                    </svg>
+                `;
+            }
+
+            return `
+                <div class="ship-marker-container" style="position: relative; width: 100%; height: 100%;">
+                    ${labelHTMLContent}
+                    ${iconInnerHtml}
+                </div>
+            `;
+        }
+
+        // Fungsi untuk memperbarui highlight visual (ikon dan track)
+        function updateHighlightVisuals() {
+            // Perbarui marker
+            for (const mmsi in shipMarkers) {
+                const marker = shipMarkers[mmsi];
+                const ship = marker.shipData;
+                if (!ship) continue;
+
+                const isMoving = ship.sog && ship.sog > MOVING_SPEED_THRESHOLD_KNOTS;
+                const isCurrentlyHighlighted = (parseInt(mmsi) === selectedMMSI);
+
+                const cachedLabelHtml = ship.cachedLabelHtml || '';
+
+                const newIcon = L.divIcon({
+                    html: getShipIconHtml(ship, isMoving, isCurrentlyHighlighted, cachedLabelHtml),
+                    className: '',
+                    iconSize: isMoving ? [16, 16] : [10, 10],
+                    iconAnchor: isMoving ? [8, 8] : [5, 5]
+                });
+                marker.setIcon(newIcon);
+            }
+
+            // Perbarui track
+            for (const mmsi in shipTracksLayers) {
+                const polyline = shipTracksLayers[mmsi];
+                const ship = allShipsData.find(s => s.mmsi === parseInt(mmsi));
+
+                const isCurrentlyHighlighted = (parseInt(mmsi) === selectedMMSI);
+                const originalColor = getShipColorByType(ship?.ship_type_code || null);
+
+                if (isCurrentlyHighlighted) {
+                    polyline.setStyle({
+                        color: 'yellow',
+                        weight: 4,
+                        opacity: 1.0
+                    });
+                } else {
+                    polyline.setStyle({
+                        color: originalColor,
+                        weight: 2,
+                        opacity: 0.7
+                    });
+                }
+            }
+        }
+
+
+        // Fungsi untuk memperbarui data kapal dan track
+        async function updateData() {
+            try {
+                const fetchPromises = [
+                    fetch('http://localhost:8080/api/ships').then(response => response.json())
+                ];
+
+                // Hanya fetch track data jika layer "Tampilkan Track Kapal" diaktifkan
+                // ATAU jika ada kapal yang sedang dipilih (selectedMMSI)
+                const shouldFetchTracks = map.hasLayer(overlayMaps["Tampilkan Track Kapal"].layer) || selectedMMSI !== null;
+
+                if (shouldFetchTracks) {
+                    fetchPromises.push(fetch('http://localhost:8080/api/all_ship_tracks').then(response => response.json()));
+                } else {
+                    fetchPromises.push(Promise.resolve({})); // Resolusi kosong jika tidak perlu fetch tracks
+                }
+
+                const [allShipsDataResponse, allTracksDataResponse] = await Promise.all(fetchPromises);
+
+                allShipsData = allShipsDataResponse;
+                const allTracksData = allTracksDataResponse;
+
+
+                document.getElementById('ship-counter').innerText = `☰ Kapal Aktif: ${allShipsData.length}`;
+                sortData();
+                renderShipListTable();
+
+                const zoomLevel = map.getZoom();
+                const showLabel = zoomLevel > 11.5;
+
+                const labelBoxes = []; // Untuk simpan posisi label yang sudah terpasang (di layar)
+                const activeMMSIs = new Set();
+
+
+                allShipsData.forEach(ship => {
+                    if (ship.lat && ship.lon) {
+                        const mmsi = ship.mmsi;
+                        activeMMSIs.add(mmsi);
+                        const latLng = [ship.lat, ship.lon];
+                        const name = ship.shipname || ship.mmsi;
+                        const isMoving = ship.sog && ship.sog > MOVING_SPEED_THRESHOLD_KNOTS;
+
+                        const isCurrentlyHighlighted = (mmsi === selectedMMSI);
+
+                        let labelHTML = '';
+                        if (showLabel) {
+                            const screenPoint = map.latLngToContainerPoint(latLng);
+                            const labelWidth = 60; // Lebar perkiraan untuk label
+                            const labelHeight = 14; // Tinggi perkiraan untuk label
+                            let labelPosition = null;
+                            const positions = [
+                                { dx: -labelWidth/2, dy: -18 }, // atas tengah
+                                { dx: -labelWidth/2, dy: 10 },  // bawah tengah
+                                { dx: 10, dy: -7 },             // kanan
+                                { dx: -labelWidth - 10, dy: -7 } // kiri
+                            ];
+
+                            for (const pos of positions) {
+                                const box = {
+                                    x: screenPoint.x + pos.dx,
+                                    y: screenPoint.y + pos.dy,
+                                    w: labelWidth,
+                                    h: labelHeight
+                                };
+
+                                const overlaps = labelBoxes.some(b => (
+                                    b.x < box.x + box.w &&
+                                    b.x + b.w > box.x &&
+                                    b.y < box.y + box.h &&
+                                    b.y + b.h > box.y
+                                ));
+
+                                if (!overlaps) {
+                                    labelBoxes.push(box);
+                                    labelPosition = pos;
+                                    break;
+                                }
+                            }
+
+                            if (labelPosition) {
+                                labelHTML = `
+                                    <div style="
+                                            position: absolute;
+                                            left: ${labelPosition.dx}px;
+                                            top: ${labelPosition.dy}px;
+                                            white-space: nowrap;
+                                            color: white;
+                                            font-size: 10px;
+                                            font-weight: bold;
+                                            text-shadow: -1px -1px 0 #000, 1px -1px 0 #000,
+                                                         -1px 1px 0 #000, 1px 1px 0 #000;">
+                                        ${name}
+                                    </div>
+                                `;
+                            }
+                        }
+
+                        ship.cachedLabelHtml = labelHTML;
+
+                        let icon = L.divIcon({
+                            html: getShipIconHtml(ship, isMoving, isCurrentlyHighlighted, labelHTML),
+                            className: '',
+                            iconSize: isMoving ? [16, 16] : [10, 10],
+                            iconAnchor: isMoving ? [8, 8] : [5, 5]
+                        });
+
+                        if (shipMarkers[mmsi]) {
+                            shipMarkers[mmsi].setLatLng(latLng).setIcon(icon);
+                            shipMarkers[mmsi].shipData = ship;
+                        } else {
+                            shipMarkers[mmsi] = L.marker(latLng, { icon: icon }).addTo(map);
+                            shipMarkers[mmsi].shipData = ship;
+                            shipMarkers[mmsi].on('click', () => toggleInfoPanel(true, mmsi));
+                        }
+                    }
+                });
+
+                for (const mmsi in shipMarkers) {
+                    if (!activeMMSIs.has(parseInt(mmsi))) {
+                        map.removeLayer(shipMarkers[mmsi]);
+                        delete shipMarkers[mmsi];
+                        if (selectedMMSI === parseInt(mmsi)) {
+                            toggleInfoPanel(false);
+                        }
+                    }
+                }
+
+                if (selectedMMSI) {
+                    updateInfoPanel(selectedMMSI);
+                }
+
+                // --- Logika Update Garis Track ---
+                const mmsisToKeepTracksDisplayed = new Set();
+                const trackAllShipsEnabled = map.hasLayer(overlayMaps["Tampilkan Track Kapal"].layer);
+
+                for (const mmsi_str_key in allTracksData) {
+                    const mmsi = parseInt(mmsi_str_key);
+                    const trackPoints = allTracksData[mmsi_str_key];
+
+                    // Tampilkan track jika:
+                    // 1. Layer "Tampilkan Track Kapal" diaktifkan (track semua kapal)
+                    // ATAU
+                    // 2. Kapal tersebut adalah selectedMMSI
+                    const shouldDisplayTrack = trackAllShipsEnabled || (mmsi === selectedMMSI);
+
+                    if (shouldDisplayTrack && activeMMSIs.has(mmsi) && trackPoints && trackPoints.length > 1) {
+                        mmsisToKeepTracksDisplayed.add(mmsi);
+
+                        const latLons = trackPoints.map(p => [p[0], p[1]]);
+
+                        const ship = allShipsData.find(s => s.mmsi === mmsi);
+                        const originalColor = getShipColorByType(ship?.ship_type_code || null);
+                        const isCurrentlyHighlighted = (mmsi === selectedMMSI);
+
+                        const polylineOptions = {
+                            color: isCurrentlyHighlighted ? 'yellow' : originalColor,
+                            weight: isCurrentlyHighlighted ? 4 : 2,
+                            opacity: isCurrentlyHighlighted ? 1.0 : 0.7,
+                            dashArray: '5, 5'
+                        };
+
+                        if (shipTracksLayers[mmsi]) {
+                            shipTracksLayers[mmsi].setLatLngs(latLons).setStyle(polylineOptions);
+                        } else {
+                            shipTracksLayers[mmsi] = L.polyline(latLons, polylineOptions);
+                            shipTracksLayers[mmsi].addTo(map);
+                            // Tambahkan event listener click ke polyline
+                            shipTracksLayers[mmsi].on('click', (e) => {
+                                L.DomEvent.stopPropagation(e); // Penting: Menghentikan event agar tidak menyebar ke peta
+                                toggleInfoPanel(true, mmsi);
+                            });
+                        }
+                    }
+                }
+
+                // Hapus track yang tidak lagi perlu ditampilkan
+                const mmsisToDeleteFromTracksLayers = [];
+                for (const mmsi in shipTracksLayers) {
+                    const mmsiInt = parseInt(mmsi);
+
+                    // Jika track saat ini ditampilkan tetapi tidak lagi diperlukan (tidak di shouldDisplayTrack, atau kapal tidak aktif)
+                    if (!mmsisToKeepTracksDisplayed.has(mmsiInt)) {
+                         if (map.hasLayer(shipTracksLayers[mmsi])) {
+                            map.removeLayer(shipTracksLayers[mmsi]);
+                        }
+                        mmsisToDeleteFromTracksLayers.push(mmsi);
+                    }
+                }
+                mmsisToDeleteFromTracksLayers.forEach(mmsi => delete shipTracksLayers[mmsi]);
+
+            } catch (error) {
+                console.error("Gagal mengambil data:", error);
+            }
+        }
+
+
+        function updateInfoPanel(mmsi) {
+            const ship = shipMarkers[mmsi]?.shipData;
+            if (!ship) {
+                toggleInfoPanel(false);
+                return;
+            }
+            const shipName = ship.shipname || ship.mmsi;
+            const lastSignal = formatLastSignal(ship.last_update);
+            const dimensionStr = (ship.length && ship.beam) ? `${ship.length}m x ${ship.beam}m` : '—';
+            const countryCode = getCountryCode(ship.country);
+            document.getElementById('info-ship-name').innerText = shipName;
+
+            const content = `<table class="ship-info-table">
+                <tr>
+                    <td><span class="label">MMSI</span><span class="value">${formatValue(ship.mmsi)}</span></td>
+                    <td><span class="label">Call Sign</span><span class="value">${formatValue(ship.callsign)}</span></td>
+                    <td><span class="label">IMO</span><span class="value">${formatValue(ship.imo)}</span></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><div class="flex-row">
+                        <div><span class="label">Status Navigasi</span><span class="value">${NAV_STATUS_MAP[ship.navigation_status] || '—'}</span></div>
+                        <div><span class="label">Tipe Kapal</span><span class="value">${getShipTypeString(ship.ship_type_code)}</span></div>
+                    </div></td>
+                </tr>
+                <tr>
+                    <td colspan="3">
+                        <div class="flex-row">
+                            <div>
+                                <span class="label">Bendera</span>
+                                <span class="value">
+                                    <span class="fi fi-${countryCode}"></span>
+                                    ${formatValue(ship.country)}
+                                </span>
+                            </div>
+                            <div>
+                                <span class="label">Kelas</span>
+                                <span class="value">${formatValue(ship.class)}</span>
+                            </div>
+                            <div>
+                                <span class="label">Tipe Pesan</span>
+                                <span class="value">${formatValue(ship.message_type)}</span>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                    <td colspan="3"><div class="flex-row">
+                        <div><span class="label">Latitude</span><span class="value">${decimalToDMS(ship.lat, true)}</span></div>
+                        <div><span class="label">Longitude</span><span class="value">${decimalToDMS(ship.lon, false)}</span></div>
+                    </div></td>
+                </tr>
+                <tr>
+                    <td><span class="label">Kecepatan</span><span class="value">${formatValue(ship.sog, 'knot')}</span></td>
+                    <td><span class="label">Arah (COG)</span><span class="value">${formatValue(ship.cog, '°')}</span></td>
+                    <td><span class="label">Haluan (HDG)</span><span class="value">${formatValue(ship.true_heading, '°')}</span></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><div class="flex-row">
+                        <div><span class="label">Dimensi (PxL)</span><span class="value">${dimensionStr}</span></div>
+                        <div><span class="label">Sarat Air</span><span class="value">${formatValue(ship.draught, 'm')}</span></div>
+                    </div></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><div class="flex-row">
+                        <div><span class="label">Tujuan</span><span class="value">${formatValue(ship.destination)}</span></div>
+                        <div><span class="label">ETA</span><span class="value">${formatETA(ship)}</span></div>
+                    </div></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><div class="flex-row">
+                        <div><span class="label">Sumber</span><span class="value">${formatValue(ship.source_company)}</span></div>
+                        <div><span class="label">Last Signal</span><span class="value">${lastSignal}</span></div>
+                    </div></td>
+                </tr>
+            </table>`;
+            document.getElementById('info-details-content').innerHTML = content;
+        }
+
+        /**
+         * Memulai animasi news ticker dengan efek fade.
+         */
+        function startNewsTicker() {
+            // Hentikan interval yang ada untuk menghindari duplikasi
+            if (tickerAnimationInterval) clearInterval(tickerAnimationInterval);
+
+            const statusTextElement = document.getElementById('status-text');
+
+            // Jika tidak ada pesan, tampilkan pesan default dan hentikan animasi
+            if (statusMessagesQueue.length === 0) {
+                statusTextElement.innerText = "Tidak ada status koneksi yang tersedia.";
+                statusTextElement.classList.add('active'); // Pastikan terlihat
+                return;
+            } else if (statusMessagesQueue.length === 1) {
+                statusTextElement.innerText = statusMessagesQueue[0];
+                statusTextElement.classList.add('active'); // Pastikan terlihat
+                return;
+            }
+
+            // Atur konten awal
+            statusTextElement.innerText = statusMessagesQueue[currentMessageIndex];
+            statusTextElement.classList.add('active');
+
+            // Fungsi untuk menjalankan satu siklus animasi
+            const animateFade = () => {
+                // Jika hanya ada satu pesan atau tidak ada pesan, hentikan animasi
+                if (statusMessagesQueue.length < 2) {
+                    stopNewsTicker();
+                    return;
+                }
+
+                // Sembunyikan teks saat ini
+                statusTextElement.classList.remove('active');
+
+                setTimeout(() => {
+                    // Pindah ke pesan berikutnya
+                    currentMessageIndex = (currentMessageIndex + 1) % statusMessagesQueue.length;
+                    statusTextElement.innerText = statusMessagesQueue[currentMessageIndex];
+                    
+                    // Tampilkan teks baru
+                    statusTextElement.classList.add('active');
+                }, 1000); // Tunggu 1 detik (sesuai durasi transisi fade-out)
+            };
+
+            // Mulai interval animasi
+            tickerAnimationInterval = setInterval(animateFade, 5000); // Ganti pesan setiap 5 detik (1s fade out + 4s tampil)
+        }
+
+        /**
+         * Menghentikan animasi news ticker.
+         */
+        function stopNewsTicker() {
+            if (tickerAnimationInterval) {
+                clearInterval(tickerAnimationInterval);
+                tickerAnimationInterval = null;
+            }
+        }
+
+        /**
+         * Mengambil status koneksi dari API dan memperbarui antrian pesan.
+         */
+        async function updateConnectionStatus() {
+            try {
+                const response = await fetch('http://localhost:8080/api/status');
+                if (!response.ok) throw new Error(`Failed to fetch status: ${response.status} ${response.statusText}`);
+                const statuses = await response.json();
+
+                const fetchedMessages = Object.entries(statuses)
+                    .filter(([key]) => key !== 'UDP_Target')
+                    .map(([name, status]) => `${name}: ${status}`);
+
+                // Bandingkan dengan statusMessagesQueue untuk menentukan apakah ada perubahan
+                const isDifferent = fetchedMessages.length !== statusMessagesQueue.length ||
+                                    fetchedMessages.some((msg, i) => msg !== statusMessagesQueue[i]);
+
+                if (isDifferent) {
+                    statusMessagesQueue = fetchedMessages; // Perbarui antrian utama
+                    currentMessageIndex = 0; // Reset indeks ke awal
+                    startNewsTicker(); // Mulai ulang ticker dengan pesan baru
+                } else if (tickerAnimationInterval === null && statusMessagesQueue.length > 0) {
+                    // Jika ticker berhenti tapi ada pesan, mulai lagi
+                    startNewsTicker();
+                } else if (statusMessagesQueue.length === 0) {
+                    // Jika tidak ada pesan, pastikan tampilan default
+                    document.getElementById('status-text').innerText = "Tidak ada status koneksi yang tersedia.";
+                    document.getElementById('status-text').classList.add('active');
+                    stopNewsTicker(); // Hentikan ticker jika tidak ada pesan
+                }
+
+
+            } catch (error) {
+                console.error("Gagal mengambil status koneksi:", error);
+                // Jika gagal, set pesan error ke antrian utama
+                statusMessagesQueue = ["Gagal memuat status koneksi."];
+                currentMessageIndex = 0;
+                startNewsTicker(); // Mulai ulang ticker dengan pesan error
+            }
+        }
+
+
+        document.getElementById('column-chooser-btn').addEventListener('click', () => {
+            document.getElementById('column-chooser-dropdown').classList.toggle('visible');
+        });
+
+        window.addEventListener('click', (e) => {
+            if (!document.getElementById('column-chooser').contains(e.target)) {
+                document.getElementById('column-chooser-dropdown').classList.remove('visible');
+            }
+        });
+
+        const statusContainer = document.getElementById('status-container');
+        makeDraggable(document.getElementById('info-panel'));
+
+        // Inisialisasi awal
+        loadColumnPreferences();
+        populateColumnChooser();
+        loadLayerPreferences(); // Panggil fungsi untuk memuat preferensi layer saat halaman dimuat
+        setInterval(updateData, 5000);
+        setInterval(updateConnectionStatus, 5000);
+
+
+        updateData();
+        updateConnectionStatus();
+        map.on('zoomend', updateData);
+
+        map.on('click', function(e) {
+            const panel = document.getElementById('info-panel');
+            if (panel.style.display !== 'none') {
+                // Periksa apakah target klik adalah salah satu marker kapal atau polyline
+                // Jika bukan, sembunyikan panel
+                if (!e.originalEvent.target.closest('.ship-marker-container') && !e.originalEvent.target.closest('.leaflet-interactive')) {
+                    toggleInfoPanel(false);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
